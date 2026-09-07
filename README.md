@@ -2,15 +2,8 @@
 ![](https://github.com/is-leeroy-jenkins/ayin/blob/main/resources/images/ayin-project.png)
 
 ___
-
-- `ayin` is a lightweight Python framework that integrates gis mapping fucntionality and scientific research APIs 
-for use in data pipelines and agentic tooling. It is designed to be simplify the integration of geospatial 
-capabilities into ML/AI workflows and applications.
-
-- With `ayin`, you can enrich spreadsheets with latitude/longitude, calculate travel distances,  
-generate static map previews, and use caching/rate limiting to control API usage — all from Python.
-
-- `ayin` plays well with `cosmo`, ayin's galactic cousin.
+A Python application that integrates gis mapping functionality and scientific research APIs for use 
+in data pipelines and agentic tooling.
 
 ## ✨ Features
 
