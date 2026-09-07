@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                distances.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="distances.py" company="Terry D. Eppler">
 
-	     Iyrin is a python framework encapsulating the Google Maps functionality.
+	     ayin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -142,7 +142,7 @@ class DistanceMatrix( ):
 			return value
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'normalize_mode( self, mode: str )'
 			raise exception
@@ -174,7 +174,7 @@ class DistanceMatrix( ):
 			return [ values ]
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'normalize_inputs( self, values: object )'
 			raise exception
@@ -207,7 +207,7 @@ class DistanceMatrix( ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'convert_distance( self, meters: int | float | None )'
 			raise exception
@@ -240,7 +240,7 @@ class DistanceMatrix( ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'convert_duration( self, seconds: int | float | None )'
 			raise exception
@@ -302,7 +302,7 @@ class DistanceMatrix( ):
 			return row
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'flatten_element( self, origin: str, destination: str, mode: str, element: Dict )'
 			raise exception
@@ -371,7 +371,7 @@ class DistanceMatrix( ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'matrix( self, origins: object, destinations: object, mode: str=driving )'
 			raise exception
@@ -428,7 +428,7 @@ class DistanceMatrix( ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'summary( self, **kwargs) -> Dict[ str, Any ]'
 			raise exception
@@ -472,7 +472,7 @@ class DistanceMatrix( ):
 			return results
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'compare_modes( self, **kwargs)'
 			raise exception
@@ -500,7 +500,7 @@ class DistanceMatrix( ):
 			return pd.DataFrame( active_rows )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'DistanceMatrix'
 			exception.method = 'to_dataframe( self, **kwarg )'
 			raise exception

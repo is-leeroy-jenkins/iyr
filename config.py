@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                config.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -48,7 +48,7 @@ import streamlit.components.v1 as components
 
 # ------------ CONSTANT
 BLUE_DIVIDER = "<div style='height:1.5px;align:left;background:#0078FC;margin:20px 0px 30px 0px;'></div>"
-APP_TITLE = 'Iyrin'
+APP_TITLE = 'ayin'
 APP_SUBTITLE = 'Geospatial Toolkit'
 DB_PATH = 'stores/sqlite/data.db'
 DEFAULT_DATA = r'Reports'

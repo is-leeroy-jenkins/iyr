@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                exceptions.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="exceptions.py" company="Terry D. Eppler">
 
-	     Iyrin is a python framework encapsulating the Google Maps functionality.
+	     ayin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -42,11 +42,11 @@
   ******************************************************************************************
   '''
 
-class IyrinError( Exception ):
+class ayinError( Exception ):
 	"""Base error for the mappy framework."""
 
-class GatewayError( IyrinError ):
+class GatewayError( ayinError ):
 	"""Raised when an HTTP request to Google Maps APIs fails unexpectedly."""
 
-class NotFound( IyrinError ):
+class NotFound( ayinError ):
 	"""Raised when no relevant result is found for a query."""

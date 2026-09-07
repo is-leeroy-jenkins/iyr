@@ -1,6 +1,6 @@
 '''
 	******************************************************************************************
-	  Assembly:                Iyrin
+	  Assembly:                ayin
 	  Filename:                places.py
 	  Author:                  Terry D. Eppler
 	  Created:                 05-31-2022
@@ -10,7 +10,7 @@
 	******************************************************************************************
 	<copyright file="places.py" company="Terry D. Eppler">
 	
-	 Iyrin is a python framework encapsulating the Google Maps functionality.
+	 ayin is a python framework encapsulating the Google Maps functionality.
 	 Copyright ©  2022  Terry Eppler
 	
 	
@@ -43,7 +43,7 @@
 	******************************************************************************************
 '''
 
-from .exceptions import IyrinError, GatewayError, NotFound  # noqa: F401
+from .exceptions import ayinError, GatewayError, NotFound  # noqa: F401
 from .rates import RateLimiter  # noqa: F401
 from .caches import BaseCache, InMemoryCache, SQLiteCache  # noqa: F401
 from .maps import Maps  # noqa: F401

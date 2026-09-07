@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                excel.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="excel.py" company="Terry D. Eppler">
 
-	     Iyrin is a python framework encapsulating the Google Maps functionality.
+	     ayin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -169,7 +169,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'read( self, path: str, sheet: Optional[ str ] )'
 			raise exception
@@ -214,7 +214,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'write( self, df: pd.DataFrame, path: str, sheet: Optional[ str ] )'
 			raise exception
@@ -252,7 +252,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'create_outputs( self )'
 			raise exception
@@ -295,7 +295,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'append_empty( self, outputs: Dict[ str, List ], status: str=skipped_empty )'
 			raise exception
@@ -343,7 +343,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'append_result( self, outputs: Dict[ str, List ], result: Dict, status: str )'
 			raise exception
@@ -387,7 +387,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'summarize( self, df: pd.DataFrame )'
 			raise exception
@@ -455,7 +455,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'detect_columns( self, df: pd.DataFrame )'
 			raise exception
@@ -512,7 +512,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'resolve_address( self, address: str, country: Optional[ str ]=None )'
 			raise exception
@@ -586,7 +586,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'resolve_city_state_country( self, city: str, state: Optional[ str ], country: str )'
 			raise exception
@@ -669,7 +669,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'enrich_from_address( self, **kwargs )'
 			raise exception
@@ -761,7 +761,7 @@ class Excel:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Excel'
 			exception.method = 'enrich( self, **kwargs)'
 			raise exception

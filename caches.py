@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                caches.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="caches.py" company="Terry D. Eppler">
 
-	     Iyrin is a python framework encapsulating the Google Maps functionality.
+	     ayin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -135,7 +135,7 @@ class BaseCache:
 			return f'{namespace}::{key}'
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'BaseCache'
 			exception.method = 'namespace_key( self, namespace: str, key: str ) -> str'
 			raise exception
@@ -189,7 +189,7 @@ class InMemoryCache( BaseCache ):
 			return time.time( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'now( self )'
 			raise exception
@@ -236,7 +236,7 @@ class InMemoryCache( BaseCache ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'make_record( self, **kwargs )'
 			raise exception
@@ -266,7 +266,7 @@ class InMemoryCache( BaseCache ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'is_expired( self, record: Dict[ str, Any ] )'
 			raise exception
@@ -304,7 +304,7 @@ class InMemoryCache( BaseCache ):
 			return record.get( 'value' )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'get( self, key: str )'
 			raise exception
@@ -336,7 +336,7 @@ class InMemoryCache( BaseCache ):
 			self._sets += 1
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'set( self, **kwargs )'
 			raise exception
@@ -362,7 +362,7 @@ class InMemoryCache( BaseCache ):
 				self._deletes += 1
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'delete( self, key: str )'
 			raise exception
@@ -393,7 +393,7 @@ class InMemoryCache( BaseCache ):
 				self._deletes += deleted
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'clear( self, namespace: Optional[ str ]=None )'
 			raise exception
@@ -417,7 +417,7 @@ class InMemoryCache( BaseCache ):
 			return self.get( key ) is not None
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'contains( self, key: str )'
 			raise exception
@@ -452,7 +452,7 @@ class InMemoryCache( BaseCache ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'InMemoryCache'
 			exception.method = 'stats( self )'
 			raise exception
@@ -526,7 +526,7 @@ class SQLiteCache( BaseCache ):
 			self._conn.commit( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'initialize( self )'
 			raise exception
@@ -561,7 +561,7 @@ class SQLiteCache( BaseCache ):
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'migrate( self )'
 			raise exception
@@ -584,7 +584,7 @@ class SQLiteCache( BaseCache ):
 			return time.time( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'now( self )'
 			raise exception
@@ -626,7 +626,7 @@ class SQLiteCache( BaseCache ):
 			return json.loads( payload )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'get( self, key: str ) -> Dict[ str, Any ]'
 			raise exception
@@ -677,7 +677,7 @@ class SQLiteCache( BaseCache ):
 			self._conn.commit( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'set( self, key: str, value: Dict[ str, Any ], ttl: Optional[ int ]=None )'
 			raise exception
@@ -702,7 +702,7 @@ class SQLiteCache( BaseCache ):
 			self._conn.commit( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'delete( self, key: str )'
 			raise exception
@@ -731,7 +731,7 @@ class SQLiteCache( BaseCache ):
 			self._conn.commit( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'clear( self, namespace: Optional[ str ]=None )'
 			raise exception
@@ -756,7 +756,7 @@ class SQLiteCache( BaseCache ):
 			return self.get( key ) is not None
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'contains( self, key: str )'
 			raise exception
@@ -787,7 +787,7 @@ class SQLiteCache( BaseCache ):
 			return count
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'purge_expired( self )'
 			raise exception
@@ -822,7 +822,7 @@ class SQLiteCache( BaseCache ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'stats( self )'
 			raise exception
@@ -844,7 +844,7 @@ class SQLiteCache( BaseCache ):
 			self._conn.close( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'SQLiteCache'
 			exception.method = 'close( self )'
 			raise exception

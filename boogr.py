@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                boogerappy.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022

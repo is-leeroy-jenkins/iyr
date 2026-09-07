@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                Iyrin
+      Assembly:                ayin
       Filename:                places.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file='places.py' company='Terry D. Eppler'>
 
-	     Iyrin is a python framework encapsulating the Google Maps functionality.
+	     ayin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
 	 
@@ -144,7 +144,7 @@ class Place( ):
 			return f'{prefix}::{joined}'
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'key_for( self, *args )'
 			raise exception
@@ -181,7 +181,7 @@ class Place( ):
 			return None
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'component_value( self, *args )'
 			raise exception
@@ -237,7 +237,7 @@ class Place( ):
 			}
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'flatten_place_details( self, *args )'
 			raise exception
@@ -280,7 +280,7 @@ class Place( ):
 			return self.output
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'place_details( self, *args )'
 			raise exception
@@ -342,7 +342,7 @@ class Place( ):
 			return self.output
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'text_to_location( self, *args )'
 			raise exception
@@ -381,7 +381,7 @@ class Place( ):
 			return self.results[ :max( 1, int( lmt ) ) ]
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'Iyrin'
+			exception.module = 'ayin'
 			exception.cause = 'Places'
 			exception.method = 'search_candidates( self, *args )'
 			raise exception
