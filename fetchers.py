@@ -64,6 +64,7 @@ from bs4 import BeautifulSoup
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 from google import genai
 from grokipedia_api import GrokipediaClient
+from langchain_community.document_loaders import UnstructuredURLLoader
 from langchain_community.retrievers import ArxivRetriever, WikipediaRetriever
 from langchain_core.documents import Document
 from langchain_core.tools import Tool
@@ -306,40 +307,46 @@ class WebFetcher( Fetcher ):
 		         'scrape_lists',
 		         'scrape_paragraphse', ]
 	
-	def fetch( self, url: str, time: int=10 ) -> Result | None:
-		'''
-			
-			Purpose:
-			-------
-			Perform an HTTP GET to fetch a page and return canonicalized Result.
-				
-			Parameters:
-			-----------
-			url (str): Absolute URL to fetch.
-			time (int): Timeout seconds to use for the request.
-			show_dialog (bool): If True, show an ErrorDialog on exception.
-				
-			Returns:
-			---------
-			Optional[Result]: Result with url, status, text, html, headers on success.
-			
-		'''
+	def fetch( self, url: str, time: int=10 ) -> List[ Document ]:
+		"""Load a web resource into LangChain documents.
+
+		Purpose:
+			Loads the requested URL with UnstructuredURLLoader so the result can flow directly
+			into chunking, embedding, and vector storage.
+
+		Args:
+			url (str): Web resource URL to load.
+			time (int): Retained timeout setting for WebFetcher API compatibility.
+
+		Returns:
+			List[Document]: LangChain documents produced from the requested URL.
+		"""
 		try:
 			throw_if( 'url', url )
 			self.url = url
 			self.timeout = time
-			self.response = requests.get( url=self.url, headers=self.headers,
-				timeout=self.timeout )
-			self.response.raise_for_status( )
-			self.result = Result( self.response )
-			return self.result
+			loader = UnstructuredURLLoader(
+				urls=[ self.url ],
+				continue_on_failure=False,
+				mode='single',
+				show_progress_bar=False )
+			documents = loader.load( )
+			if not documents:
+				raise ValueError( f'No document content was returned for URL: {self.url}' )
+
+			for document in documents:
+				document.metadata = dict( document.metadata or { } )
+				document.metadata[ 'source' ] = document.metadata.get( 'source', self.url )
+				document.metadata[ 'url' ] = document.metadata.get( 'url', self.url )
+
+			return documents
 		except Exception as exc:
 			exception = Error( exc )
 			exception.module = 'fetchers'
 			exception.cause = 'WebFetcher'
-			exception.method = 'fetch( self, url: str, time: int=10  ) -> Result'
+			exception.method = 'fetch( self, url: str, time: int=10 ) -> List[ Document ]'
 			raise exception
-			
+
 	def html_to_text( self, html: str ) -> str:
 		'''
 			
