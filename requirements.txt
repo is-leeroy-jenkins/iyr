@@ -26,3 +26,16 @@ langchain-googledrive
 arxiv
 wikipedia
 playwright
+langchain-text-splitters
+langchain-openai
+langchain-google-genai
+langchain-mistralai
+langchain-huggingface
+langchain-chroma
+langchain-pinecone
+sentence-transformers
+chromadb
+pinecone
+llama-cpp-python
+unstructured
+pyreadline3; sys_platform == "win32"
