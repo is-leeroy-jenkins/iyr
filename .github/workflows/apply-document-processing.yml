@@ -1,0 +1,62 @@
+name: Apply Document Processing
+
+on:
+  push:
+    branches:
+      - feature/document-processing
+    paths:
+      - .github/apply-document-processing.py
+      - .github/workflows/apply-document-processing.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/document-processing
+          fetch-depth: 0
+
+      - name: Apply integration
+        run: python .github/apply-document-processing.py
+
+      - name: Validate Python
+        run: python -m py_compile app.py fetchers.py document_processing.py embedders.py stores/vector.py
+
+      - name: Validate structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path('app.py').read_text(encoding='utf-8')
+          fetchers = Path('fetchers.py').read_text(encoding='utf-8')
+
+          assert "elif mode == 'Site Crawler':\n\trender_web_document_processing( )" in app
+          assert "render_mode_document_tabs( 'weather', '📄 Loaded' )" in app
+          assert "render_mode_document_tabs( 'env', '📄 Loaded' )" in app
+          assert "render_mode_document_tabs( 'geo', '📄 Loaded' )" in app
+          assert "render_mode_document_tabs( 'astro', '📄 Loaded' )" in app
+          assert app.count("render_source_processing_controls( 'weather'") >= 5
+          assert app.count("render_source_processing_controls( 'env'") >= 5
+          assert app.count("render_source_processing_controls( 'geo'") >= 3
+          assert app.count("render_source_processing_controls( 'astro'") >= 5
+          assert 'UnstructuredURLLoader' in fetchers
+          assert '-> List[ Document ]' in fetchers
+          PY
+
+      - name: Validate diff
+        run: git diff --check
+
+      - name: Commit integration and remove temporary files
+        run: |
+          rm .github/apply-document-processing.py
+          rm .github/workflows/apply-document-processing.yml
+          git config user.name "Terry Eppler"
+          git config user.email "terry.eppler@gmail.com"
+          git add app.py fetchers.py requirements.txt document_processing.py embedders.py stores/vector.py stores/__init__.py .github
+          git commit -m "Integrate Foo document processing into data modes"
+          git push origin feature/document-processing
