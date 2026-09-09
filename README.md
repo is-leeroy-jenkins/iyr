@@ -16,8 +16,6 @@ in data pipelines and agentic tooling.
 - 🛠 **Error Handling** – Explicit exceptions for not found, gateway failures, and more.  
 - 🧩 **Extensible** – Drop-in services for Places, Directions, or any other Maps endpoint.  
 
-
-
 ## 📦 Installation
 
 Clone the repository and install dependencies:
