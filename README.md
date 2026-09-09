@@ -1,4 +1,4 @@
-###### ayin
+###### iyrin
 ![](https://github.com/is-leeroy-jenkins/iyr/blob/main/resources/images/iyrin-project.png)
 
 ___
