@@ -31,8 +31,6 @@ Clone the repository and install dependencies:
 - `pandas` – spreadsheet data processing  
 - `openpyxl` – Excel I/O (.xlsx files)  
 
-
-
 ## 🚀 Quick Start
 
 ### 1. Initialize Maps
