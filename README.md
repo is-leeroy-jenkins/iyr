@@ -1,5 +1,5 @@
 ###### ayin
-![](https://github.com/is-leeroy-jenkins/ayin/blob/main/resources/images/ayin-project.png)
+![](https://github.com/is-leeroy-jenkins/iyr/blob/main/resources/images/iyrin-project.png)
 
 ___
 A Python application that integrates gis mapping functionality and scientific research APIs for use 
