@@ -55,10 +55,10 @@ LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
 
 AI_ADVANCED_TOOLS: Dict[ str, str ] = {
 	'cross_layer_analysis': '🧭 Cross-Layer Analysis',
+	'geofencing': '🛡️ Geofencing',
 }
 
 AI_ADVANCED_PENDING_TOOLS: Dict[ str, str ] = {
-	'geofencing': '🛡️ Geofencing',
 	'agent_tools': '🤖 Agent Tools',
 	'historical_replay': '🕓 Historical Replay',
 }
@@ -182,6 +182,18 @@ def initialize_live_world_state( ) -> None:
 		'live_world_analysis_entity_types': [
 			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
 		'live_world_analysis_limit': 100,
+		'live_world_geofencing': False,
+		'live_world_geofence_origin': 'Current Location',
+		'live_world_geofence_custom_latitude': 0.0,
+		'live_world_geofence_custom_longitude': 0.0,
+		'live_world_geofence_radius_nm': 50,
+		'live_world_geofence_entity_types': [
+			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
+		'live_world_geofence_event_limit': 100,
+		'live_world_geofence_events': [ ],
+		'live_world_geofence_snapshot': { },
+		'live_world_geofence_initialized': False,
+		'live_world_geofence_last_refresh_processed': '',
 		'live_world_refresh_requested': False,
 		'live_world_last_refresh': '',
 		'live_world_last_error': '',
@@ -418,6 +430,35 @@ def render_live_world_sidebar( ) -> None:
 					key='live_world_analysis_entity_types' )
 				st.slider( 'Analysis Result Limit', min_value=10, max_value=500,
 					step=10, key='live_world_analysis_limit' )
+
+			st.checkbox( AI_ADVANCED_TOOLS[ 'geofencing' ], key='live_world_geofencing' )
+			if st.session_state[ 'live_world_geofencing' ]:
+				geofence_options = get_live_world_geofence_origin_options( )
+				geofence_keys = list( geofence_options.keys( ) )
+				if st.session_state[ 'live_world_geofence_origin' ] not in geofence_keys:
+					st.session_state[ 'live_world_geofence_origin' ] = 'Current Location'
+				st.selectbox( 'Geofence Origin', options=geofence_keys,
+					format_func=lambda value: geofence_options[ value ],
+					key='live_world_geofence_origin' )
+				if st.session_state[ 'live_world_geofence_origin' ] == 'Custom Point':
+					geofence_c1, geofence_c2 = st.columns( 2 )
+					with geofence_c1:
+						st.number_input( 'Geofence Latitude', min_value=-90.0, max_value=90.0,
+							format='%.6f', key='live_world_geofence_custom_latitude' )
+					with geofence_c2:
+						st.number_input( 'Geofence Longitude', min_value=-180.0, max_value=180.0,
+							format='%.6f', key='live_world_geofence_custom_longitude' )
+				st.slider( 'Geofence Radius (NM)', min_value=5, max_value=1000,
+					step=5, key='live_world_geofence_radius_nm' )
+				st.multiselect( 'Geofence Entity Types',
+					options=[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel',
+						'Earthquake', 'Fire' ],
+					key='live_world_geofence_entity_types' )
+				st.slider( 'Geofence Event History', min_value=10, max_value=500,
+					step=10, key='live_world_geofence_event_limit' )
+				if st.button( 'Clear Geofence Events', icon='🧹',
+						key='live_world_geofence_clear_events', width='stretch' ):
+					clear_live_world_geofence_events( )
 			for label in AI_ADVANCED_PENDING_TOOLS.values( ):
 				st.checkbox( label, value=False, disabled=True )
 
@@ -451,6 +492,10 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
 	st.session_state[ 'live_world_annotations' ] = [ ]
+	st.session_state[ 'live_world_geofence_events' ] = [ ]
+	st.session_state[ 'live_world_geofence_snapshot' ] = { }
+	st.session_state[ 'live_world_geofence_initialized' ] = False
+	st.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''
 	st.session_state[ 'live_world_last_refresh' ] = ''
 	st.session_state[ 'live_world_last_error' ] = ''
 	st.session_state[ 'live_world_refresh_requested' ] = False
@@ -1451,6 +1496,252 @@ def calculate_live_world_cross_layer_analysis( latitude: float,
 	limit = int( st.session_state[ 'live_world_analysis_limit' ] )
 	return df_result.head( limit ).reset_index( drop=True )
 
+
+def get_live_world_geofence_origin_options( ) -> Dict[ str, str ]:
+	'''
+
+		Purpose:
+		--------
+		Return selectable Geofencing origins from current location and loaded entities.
+
+		Returns:
+		--------
+		Dict[str, str]: Geofence origin keys mapped to display labels.
+
+	'''
+	initialize_live_world_state( )
+	options: Dict[ str, str ] = {
+		'Current Location': 'Current Location',
+		'Custom Point': 'Custom Point',
+	}
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	if df_entities is None or df_entities.empty:
+		return options
+	for _, row in df_entities.iterrows( ):
+		entity_id = str( row[ 'EntityId' ] )
+		entity_type = str( row[ 'EntityType' ] )
+		name = str( row[ 'Name' ] )
+		key = f'Entity::{entity_type}::{entity_id}'
+		options[ key ] = f'{entity_type} | {name} | {entity_id}'
+	return options
+
+
+def resolve_live_world_geofence_origin( key: str, latitude: float,
+		longitude: float ) -> Dict[ str, object ]:
+	'''
+
+		Purpose:
+		--------
+		Resolve the configured Geofencing origin into coordinates and a display label.
+
+		Parameters:
+		-----------
+		key (str): Selected geofence origin key.
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+
+		Returns:
+		--------
+		Dict[str, object]: Resolved geofence origin.
+
+	'''
+	throw_if( 'key', key )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	if key == 'Current Location':
+		return { 'Label': 'Current Location', 'Latitude': float( latitude ),
+			'Longitude': float( longitude ), 'EntityType': '', 'EntityId': '' }
+	if key == 'Custom Point':
+		return {
+			'Label': 'Custom Point',
+			'Latitude': float( st.session_state[ 'live_world_geofence_custom_latitude' ] ),
+			'Longitude': float( st.session_state[ 'live_world_geofence_custom_longitude' ] ),
+			'EntityType': '',
+			'EntityId': '',
+		}
+	if not key.startswith( 'Entity::' ):
+		raise ValueError( f'Unknown geofence origin: {key}' )
+	_, entity_type, entity_id = key.split( '::', 2 )
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	df_match = df_entities[
+		(df_entities[ 'EntityType' ].astype( str ) == entity_type)
+		& (df_entities[ 'EntityId' ].astype( str ) == entity_id) ].copy( )
+	if df_match.empty:
+		raise ValueError( f'Geofence origin entity is no longer available: {entity_id}' )
+	row = df_match.iloc[ 0 ]
+	return {
+		'Label': f'{entity_type} | {row[ "Name" ]}',
+		'Latitude': float( row[ 'Latitude' ] ),
+		'Longitude': float( row[ 'Longitude' ] ),
+		'EntityType': entity_type,
+		'EntityId': entity_id,
+	}
+
+
+def calculate_live_world_geofence( latitude: float, longitude: float ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Return loaded Live World entities currently inside the configured circular geofence.
+
+		Parameters:
+		-----------
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+
+		Returns:
+		--------
+		pd.DataFrame: Geofence members ordered by nearest distance.
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	columns = [ 'EntityId', 'EntityType', 'Name', 'Latitude', 'Longitude', 'Altitude',
+		'Heading', 'Speed', 'Timestamp', 'Source', 'Metadata', 'DistanceNM',
+		'DistanceKM', 'DistanceMiles', 'Bearing' ]
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	if df_entities is None or df_entities.empty:
+		return pd.DataFrame( columns=columns )
+	entity_types = list( st.session_state.get( 'live_world_geofence_entity_types', [ ] ) or [ ] )
+	if not entity_types:
+		return pd.DataFrame( columns=columns )
+	origin = resolve_live_world_geofence_origin(
+		str( st.session_state[ 'live_world_geofence_origin' ] ), latitude, longitude )
+	df_geofence = df_entities[ df_entities[ 'EntityType' ].isin( entity_types ) ].copy( )
+	df_geofence[ 'Latitude' ] = pd.to_numeric( df_geofence[ 'Latitude' ], errors='coerce' )
+	df_geofence[ 'Longitude' ] = pd.to_numeric( df_geofence[ 'Longitude' ], errors='coerce' )
+	df_geofence = df_geofence.dropna( subset=[ 'Latitude', 'Longitude' ] )
+	rows: List[ Dict[ str, object ] ] = [ ]
+	for _, row in df_geofence.iterrows( ):
+		if (str( origin[ 'EntityType' ] ) == str( row[ 'EntityType' ] )
+				and str( origin[ 'EntityId' ] ) == str( row[ 'EntityId' ] )
+				and str( origin[ 'EntityId' ] )):
+			continue
+		distance_nm = calculate_live_world_distance_nm(
+			float( origin[ 'Latitude' ] ), float( origin[ 'Longitude' ] ),
+			float( row[ 'Latitude' ] ), float( row[ 'Longitude' ] ) )
+		if distance_nm > float( st.session_state[ 'live_world_geofence_radius_nm' ] ):
+			continue
+		lat_a = math.radians( float( origin[ 'Latitude' ] ) )
+		lat_b = math.radians( float( row[ 'Latitude' ] ) )
+		delta_lon = math.radians( float( row[ 'Longitude' ] ) - float( origin[ 'Longitude' ] ) )
+		y = math.sin( delta_lon ) * math.cos( lat_b )
+		x = (math.cos( lat_a ) * math.sin( lat_b )
+			- math.sin( lat_a ) * math.cos( lat_b ) * math.cos( delta_lon ))
+		bearing = (math.degrees( math.atan2( y, x ) ) + 360.0) % 360.0
+		result = row.to_dict( )
+		result[ 'DistanceNM' ] = distance_nm
+		result[ 'DistanceKM' ] = distance_nm * 1.852
+		result[ 'DistanceMiles' ] = distance_nm * 1.150779448
+		result[ 'Bearing' ] = bearing
+		rows.append( result )
+	if not rows:
+		return pd.DataFrame( columns=columns )
+	return pd.DataFrame( rows ).sort_values(
+		by='DistanceNM', ascending=True, kind='stable' ).reset_index( drop=True )
+
+
+def update_live_world_geofence_events( df_geofence: pd.DataFrame ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Record entity entry and exit transitions for the configured geofence after refreshes.
+
+		Parameters:
+		-----------
+		df_geofence (pd.DataFrame): Current entities inside the configured geofence.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'df_geofence', df_geofence )
+	current_snapshot: Dict[ str, Dict[ str, object ] ] = { }
+	for _, row in df_geofence.iterrows( ):
+		key = f'{row[ "EntityType" ]}::{row[ "EntityId" ]}'
+		current_snapshot[ key ] = {
+			'EntityId': str( row[ 'EntityId' ] ),
+			'EntityType': str( row[ 'EntityType' ] ),
+			'Name': str( row[ 'Name' ] ),
+			'Latitude': float( row[ 'Latitude' ] ),
+			'Longitude': float( row[ 'Longitude' ] ),
+			'DistanceNM': float( row[ 'DistanceNM' ] ),
+			'Source': str( row[ 'Source' ] ),
+		}
+	previous_snapshot = dict( st.session_state.get( 'live_world_geofence_snapshot', { } ) or { } )
+	if not st.session_state[ 'live_world_geofence_initialized' ]:
+		st.session_state[ 'live_world_geofence_snapshot' ] = current_snapshot
+		st.session_state[ 'live_world_geofence_initialized' ] = True
+		return
+	entered = sorted( set( current_snapshot ) - set( previous_snapshot ) )
+	exited = sorted( set( previous_snapshot ) - set( current_snapshot ) )
+	events = list( st.session_state.get( 'live_world_geofence_events', [ ] ) or [ ] )
+	observed_at = dt.datetime.now( dt.timezone.utc ).isoformat( )
+	for key in entered:
+		item = current_snapshot[ key ]
+		events.append( {
+			'Event': 'Entered', 'EntityId': item[ 'EntityId' ],
+			'EntityType': item[ 'EntityType' ], 'Name': item[ 'Name' ],
+			'Latitude': item[ 'Latitude' ], 'Longitude': item[ 'Longitude' ],
+			'DistanceNM': item[ 'DistanceNM' ], 'Source': item[ 'Source' ],
+			'ObservedAt': observed_at,
+		} )
+	for key in exited:
+		item = previous_snapshot[ key ]
+		events.append( {
+			'Event': 'Exited', 'EntityId': item[ 'EntityId' ],
+			'EntityType': item[ 'EntityType' ], 'Name': item[ 'Name' ],
+			'Latitude': item[ 'Latitude' ], 'Longitude': item[ 'Longitude' ],
+			'DistanceNM': item[ 'DistanceNM' ], 'Source': item[ 'Source' ],
+			'ObservedAt': observed_at,
+		} )
+	limit = int( st.session_state[ 'live_world_geofence_event_limit' ] )
+	st.session_state[ 'live_world_geofence_events' ] = events[ -limit: ]
+	st.session_state[ 'live_world_geofence_snapshot' ] = current_snapshot
+
+
+def clear_live_world_geofence_events( ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Clear Geofencing event history and reset the transition baseline.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	st.session_state[ 'live_world_geofence_events' ] = [ ]
+	st.session_state[ 'live_world_geofence_snapshot' ] = { }
+	st.session_state[ 'live_world_geofence_initialized' ] = False
+	st.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''
+
+
+def get_live_world_geofence_event_frame( ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Return current Geofencing transition events as a DataFrame.
+
+		Returns:
+		--------
+		pd.DataFrame: Ordered Geofencing event history.
+
+	'''
+	initialize_live_world_state( )
+	columns = [ 'Event', 'EntityId', 'EntityType', 'Name', 'Latitude', 'Longitude',
+		'DistanceNM', 'Source', 'ObservedAt' ]
+	return pd.DataFrame( st.session_state.get( 'live_world_geofence_events', [ ] ) or [ ],
+		columns=columns )
+
 def clear_live_world_tracking( ) -> None:
 	'''
 
@@ -1770,6 +2061,48 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		except Exception as ex:
 			analysis_error = str( ex )
 
+	df_geofence = pd.DataFrame( )
+	geofence_origin: Dict[ str, object ] = { }
+	geofence_error = ''
+	if st.session_state[ 'live_world_geofencing' ]:
+		try:
+			geofence_origin = resolve_live_world_geofence_origin(
+				str( st.session_state[ 'live_world_geofence_origin' ] ), latitude, longitude )
+			df_geofence = calculate_live_world_geofence( latitude, longitude )
+			df_geofence_origin = pd.DataFrame( [ geofence_origin ] )
+			df_geofence_origin[ 'Radius' ] = float(
+				st.session_state[ 'live_world_geofence_radius_nm' ] ) * 1852.0
+			layers.append( pdk.Layer( 'ScatterplotLayer', data=df_geofence_origin,
+				get_position='[Longitude, Latitude]', get_radius='Radius',
+				get_fill_color=[ 255, 80, 80, 15 ], get_line_color=[ 255, 80, 80, 190 ],
+				line_width_min_pixels=2, radius_min_pixels=1,
+				filled=True, stroked=True, pickable=False ) )
+			df_geofence_origin[ 'Radius' ] = 12000.0 * point_scale
+			layers.append( pdk.Layer( 'ScatterplotLayer', data=df_geofence_origin,
+				get_position='[Longitude, Latitude]', get_radius='Radius',
+				get_fill_color=[ 255, 80, 80, 180 ], get_line_color=[ 255, 255, 255, 255 ],
+				line_width_min_pixels=2, radius_min_pixels=8, radius_max_pixels=30,
+				filled=True, stroked=True, pickable=False ) )
+			if not df_geofence.empty:
+				df_geofence_points = df_geofence.copy( )
+				df_geofence_points[ 'Radius' ] = 11000.0 * point_scale
+				layers.append( pdk.Layer( 'ScatterplotLayer', data=df_geofence_points,
+					get_position='[Longitude, Latitude]', get_radius='Radius',
+					get_fill_color=[ 255, 80, 80, 45 ], get_line_color=[ 255, 80, 80, 255 ],
+					line_width_min_pixels=2, radius_min_pixels=7, radius_max_pixels=28,
+					filled=True, stroked=True, pickable=True ) )
+			last_refresh = str( st.session_state.get( 'live_world_last_refresh', '' ) or '' )
+			last_processed = str( st.session_state.get(
+				'live_world_geofence_last_refresh_processed', '' ) or '' )
+			if not st.session_state[ 'live_world_geofence_initialized' ]:
+				update_live_world_geofence_events( df_geofence )
+				st.session_state[ 'live_world_geofence_last_refresh_processed' ] = last_refresh
+			elif last_refresh and last_refresh != last_processed:
+				update_live_world_geofence_events( df_geofence )
+				st.session_state[ 'live_world_geofence_last_refresh_processed' ] = last_refresh
+		except Exception as ex:
+			geofence_error = str( ex )
+
 	if not df_aircraft.empty:
 		df_aircraft[ 'Radius' ] = 7000.0 * point_scale
 		layers.append( pdk.Layer(
@@ -1888,6 +2221,10 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 	if not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
 		center_latitude = float( df_map[ 'Latitude' ].median( ) )
 		center_longitude = float( df_map[ 'Longitude' ].median( ) )
+	if (st.session_state[ 'live_world_geofencing' ] and geofence_origin
+			and not st.session_state[ 'live_world_cross_layer_analysis' ]):
+		center_latitude = float( geofence_origin[ 'Latitude' ] )
+		center_longitude = float( geofence_origin[ 'Longitude' ] )
 	if (st.session_state[ 'live_world_cross_layer_analysis' ] and analysis_origin):
 		center_latitude = float( analysis_origin[ 'Latitude' ] )
 		center_longitude = float( analysis_origin[ 'Longitude' ] )
@@ -1917,9 +2254,10 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab, analysis_tab = st.tabs(
+	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab = st.tabs(
 		[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
-			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking', '📏 Measurements', '🧭 Analysis' ] )
+			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking', '📏 Measurements', '🧭 Analysis',
+			'🛡️ Geofence' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -2041,6 +2379,37 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			st.data_editor( make_live_world_display_frame( df_analysis ),
 				key='live_world_analysis_table', use_container_width=True,
 				disabled=True, hide_index=True )
+
+	with geofence_tab:
+		if not st.session_state[ 'live_world_geofencing' ]:
+			st.info( 'Enable Geofencing in AI & Advanced Tools.' )
+		elif geofence_error:
+			st.error( f'Geofencing failed: {geofence_error}' )
+		else:
+			df_geofence_events = get_live_world_geofence_event_frame( )
+			geofence_c1, geofence_c2, geofence_c3, geofence_c4 = st.columns( 4, border=True )
+			geofence_c1.metric( 'Inside Geofence', f'{len( df_geofence ):,}' )
+			geofence_c2.metric( 'Radius (NM)',
+				f'{float( st.session_state[ "live_world_geofence_radius_nm" ] ):,.0f}' )
+			geofence_c3.metric( 'Events', f'{len( df_geofence_events ):,}' )
+			last_event = str( df_geofence_events.iloc[ -1 ][ 'Event' ] ) if not df_geofence_events.empty else 'None'
+			geofence_c4.metric( 'Last Event', last_event )
+			if geofence_origin:
+				st.caption( f'Origin: {geofence_origin[ "Label" ]}' )
+			if df_geofence.empty:
+				st.info( 'No selected Live World entities are currently inside the geofence.' )
+			else:
+				st.markdown( '**Entities Inside Geofence**' )
+				st.data_editor( make_live_world_display_frame( df_geofence ),
+					key='live_world_geofence_table', use_container_width=True,
+					disabled=True, hide_index=True )
+			st.markdown( '**Entry / Exit Events**' )
+			if df_geofence_events.empty:
+				st.info( 'No geofence transition events have been recorded.' )
+			else:
+				st.data_editor( df_geofence_events, key='live_world_geofence_events_table',
+					use_container_width=True, disabled=True, hide_index=True )
+
 
 def get_metadata_number( metadata: object, key: str, default: float=0.0 ) -> float:
 	'''
