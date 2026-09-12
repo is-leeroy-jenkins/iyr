@@ -1,0 +1,75 @@
+name: Implement Live World Geofencing
+
+on:
+  push:
+    branches:
+      - feature/live-world-geofencing
+    paths:
+      - .github/workflows/implement-live-world-geofencing.yml
+      - .github/scripts/implement_live_world_geofencing.py
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-geofencing
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Implement Geofencing
+        run: python .github/scripts/implement_live_world_geofencing.py
+
+      - name: Check conflict markers
+        shell: bash
+        run: |
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' --include='*.py' --include='*.toml' --include='*.yml' --include='*.yaml' --include='*.md' . --exclude-dir=.git; then
+            echo 'Unresolved merge markers found.'
+            exit 1
+          fi
+
+      - name: Compile Python sources
+        run: python -m compileall -q .
+
+      - name: Verify Geofencing contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          text = Path( 'live_world.py' ).read_text( encoding='utf-8' )
+          required = [
+              "'geofencing': '🛡️ Geofencing'",
+              "'live_world_geofencing': False",
+              'def get_live_world_geofence_origin_options( )',
+              'def resolve_live_world_geofence_origin( key: str, latitude: float,',
+              'def calculate_live_world_geofence( latitude: float, longitude: float )',
+              'def update_live_world_geofence_events( df_geofence: pd.DataFrame )',
+              'def clear_live_world_geofence_events( )',
+              "key='live_world_geofencing'",
+              "'🛡️ Geofence'",
+              'with geofence_tab:',
+          ]
+          for value in required:
+              if value not in text:
+                  raise RuntimeError( f'Missing Geofencing contract: {value}' )
+          print( 'Geofencing contracts verified.' )
+          PY
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          if git diff --quiet -- live_world.py; then
+            echo 'No Live World implementation changes detected.'
+            exit 1
+          fi
+          git config user.name 'Terry Eppler'
+          git config user.email 'terry.eppler@gmail.com'
+          git add live_world.py
+          git commit -m 'Implement Live World geofencing'
+          git push origin feature/live-world-geofencing
