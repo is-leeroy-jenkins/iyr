@@ -10,17 +10,22 @@
 ******************************************************************************************
 
 Purpose:
-    Provider clients used by Iyr Live World Data for real-time aircraft state vectors and
-    current satellite orbital elements. OpenSky access uses the current OAuth2 client
-    credentials flow when API-client credentials are available. CelesTrak data is requested
-    in OMM JSON format and propagated with SGP4 before conversion to Earth-fixed coordinates.
+    Provider clients used by Iyr Live World Data for real-time aircraft state vectors,
+    military aircraft, maritime AIS positions, and current satellite orbital elements.
+    OpenSky access uses the current OAuth2 client-credentials flow when API-client
+    credentials are available. ADSB.lol provides public military-tagged aircraft data.
+    AIS Stream provides server-side WebSocket maritime position events. CelesTrak data is
+    requested in OMM JSON format and propagated with SGP4 before conversion to Earth-fixed
+    coordinates.
 ******************************************************************************************
 '''
 
 from __future__ import annotations
 
 import datetime as dt
+import json
 import math
+import time
 from typing import Any, Dict, List
 
 import requests
@@ -30,6 +35,7 @@ from astropy.time import Time
 from requests import Response
 from sgp4 import omm
 from sgp4.api import Satrec
+from websocket import WebSocket, WebSocketTimeoutException, create_connection
 
 
 def throw_if( name: str, value: object ) -> None:
@@ -173,6 +179,179 @@ class OpenSkyLive:
 			headers=self.headers, timeout=self.timeout )
 		self.response.raise_for_status( )
 		return self.response.json( ) or { }
+
+
+class AdsbLolMilitary:
+	'''
+
+		Purpose:
+		--------
+		Retrieve aircraft currently tagged as military by ADSB.lol.
+
+	'''
+	timeout: int
+	url: str
+	response: Response | None
+
+	def __init__( self, timeout: int=20 ) -> None:
+		'''
+
+			Purpose:
+			--------
+			Initialize ADSB.lol military-aircraft access.
+
+			Parameters:
+			-----------
+			timeout (int): HTTP timeout in seconds.
+
+			Returns:
+			--------
+			None
+
+		'''
+		self.timeout = timeout
+		self.url = 'https://api.adsb.lol/v2/mil'
+		self.response = None
+
+	def fetch_military( self ) -> Dict[ str, Any ]:
+		'''
+
+			Purpose:
+			--------
+			Retrieve the current ADSB.lol military-tagged aircraft payload.
+
+			Returns:
+			--------
+			Dict[str, Any]: ADSB.lol aircraft payload containing the ac collection.
+
+		'''
+		self.response = requests.get( self.url, timeout=self.timeout )
+		self.response.raise_for_status( )
+		payload = self.response.json( ) or { }
+		if not isinstance( payload, dict ):
+			raise TypeError( 'ADSB.lol military response must be a dictionary.' )
+		return payload
+
+
+class AisStreamLive:
+	'''
+
+		Purpose:
+		--------
+		Retrieve live maritime AIS position reports through the AIS Stream WebSocket API.
+
+	'''
+	api_key: str
+	timeout: int
+	url: str
+	socket: WebSocket | None
+
+	def __init__( self, api_key: str, timeout: int=5 ) -> None:
+		'''
+
+			Purpose:
+			--------
+			Initialize AIS Stream server-side WebSocket access.
+
+			Parameters:
+			-----------
+			api_key (str): AIS Stream API key.
+			timeout (int): WebSocket connection and receive timeout in seconds.
+
+			Returns:
+			--------
+			None
+
+		'''
+		throw_if( 'api_key', api_key )
+		self.api_key = api_key
+		self.timeout = timeout
+		self.url = 'wss://stream.aisstream.io/v0/stream'
+		self.socket = None
+
+	def fetch_positions( self, latitude: float, longitude: float,
+			radius_degrees: float=2.0, max_messages: int=100,
+			duration_seconds: float=3.0 ) -> List[ Dict[ str, Any ] ]:
+		'''
+
+			Purpose:
+			--------
+			Collect a bounded sample of live AIS vessel position messages around a geographic
+			center point.
+
+			Parameters:
+			-----------
+			latitude (float): Bounding-box center latitude.
+			longitude (float): Bounding-box center longitude.
+			radius_degrees (float): Decimal-degree half-width of the bounding box.
+			max_messages (int): Maximum matching AIS messages returned.
+			duration_seconds (float): Maximum receive window in seconds.
+
+			Returns:
+			--------
+			List[Dict[str, Any]]: AIS Stream message envelopes containing vessel positions.
+
+		'''
+		throw_if( 'latitude', latitude )
+		throw_if( 'longitude', longitude )
+		throw_if( 'radius_degrees', radius_degrees )
+		throw_if( 'max_messages', max_messages )
+		throw_if( 'duration_seconds', duration_seconds )
+		self.latitude = float( latitude )
+		self.longitude = float( longitude )
+		self.radius_degrees = float( radius_degrees )
+		self.max_messages = int( max_messages )
+		self.duration_seconds = float( duration_seconds )
+		self.north = min( 90.0, self.latitude + self.radius_degrees )
+		self.south = max( -90.0, self.latitude - self.radius_degrees )
+		self.west = max( -180.0, self.longitude - self.radius_degrees )
+		self.east = min( 180.0, self.longitude + self.radius_degrees )
+		self.subscription = {
+			'APIKey': self.api_key,
+			'BoundingBoxes': [ [ [ self.north, self.west ], [ self.south, self.east ] ] ],
+			'FilterMessageTypes': [
+				'PositionReport',
+				'StandardClassBPositionReport',
+				'ExtendedClassBPositionReport',
+				'LongRangeAisBroadcastMessage',
+			],
+		}
+		messages: List[ Dict[ str, Any ] ] = [ ]
+		self.socket = create_connection( self.url, timeout=self.timeout )
+		self.socket.send( json.dumps( self.subscription ) )
+		started = time.monotonic( )
+
+		try:
+			while len( messages ) < self.max_messages:
+				elapsed = time.monotonic( ) - started
+				remaining = self.duration_seconds - elapsed
+				if remaining <= 0.0:
+					break
+
+				self.socket.settimeout( min( 1.0, max( 0.1, remaining ) ) )
+				try:
+					frame = self.socket.recv( )
+				except WebSocketTimeoutException:
+					continue
+
+				if isinstance( frame, bytes ):
+					frame = frame.decode( 'utf-8' )
+				payload = json.loads( frame )
+				if not isinstance( payload, dict ):
+					continue
+				if payload.get( 'MessageType' ) == 'SubscriptionConfirmation':
+					continue
+				metadata = payload.get( 'MetaData', { } ) or { }
+				if metadata.get( 'Latitude' ) is None or metadata.get( 'Longitude' ) is None:
+					continue
+				messages.append( payload )
+
+		finally:
+			if self.socket is not None:
+				self.socket.close( )
+				self.socket = None
+
+		return messages
 
 
 class CelesTrakLive:
