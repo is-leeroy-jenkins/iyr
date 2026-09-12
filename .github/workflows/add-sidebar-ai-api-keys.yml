@@ -1,0 +1,98 @@
+name: Add Sidebar AI API Keys
+
+on:
+  push:
+    branches:
+      - feature/sidebar-ai-api-keys
+    paths:
+      - .github/workflows/add-sidebar-ai-api-keys.yml
+      - .github/scripts/add_sidebar_ai_api_keys.py
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/sidebar-ai-api-keys
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Add sidebar provider API keys
+        run: python .github/scripts/add_sidebar_ai_api_keys.py
+
+      - name: Check conflict markers
+        shell: bash
+        run: |
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' --include='*.py' --include='*.toml' --include='*.yml' --include='*.yaml' --include='*.md' . --exclude-dir=.git; then
+            echo 'Unresolved merge markers found.'
+            exit 1
+          fi
+
+      - name: Compile Python sources
+        run: python -m compileall -q .
+
+      - name: Verify credential contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path( 'app.py' ).read_text( encoding='utf-8' )
+          config = Path( 'config.py' ).read_text( encoding='utf-8' )
+
+          controls = [
+              "'Google API Key'",
+              "'Google Maps API Key'",
+              "'OpenAI API Key'",
+              "'Gemini API Key'",
+              "'Grok / xAI API Key'",
+              "'Claude API Key'",
+              "'Mistral API Key'",
+          ]
+          session_keys = [
+              'openai_api_key',
+              'gemini_api_key',
+              'xai_api_key',
+              'claude_api_key',
+              'mistral_api_key',
+          ]
+          environment_keys = [
+              'OPENAI_API_KEY',
+              'GEMINI_API_KEY',
+              'XAI_API_KEY',
+              'CLAUDE_API_KEY',
+              'MISTRAL_API_KEY',
+          ]
+
+          for value in controls:
+              if value not in app:
+                  raise RuntimeError( f'Missing sidebar credential control: {value}' )
+          for value in session_keys:
+              if value not in app:
+                  raise RuntimeError( f'Missing session credential state: {value}' )
+          for value in environment_keys:
+              if value not in app:
+                  raise RuntimeError( f'Missing environment credential assignment: {value}' )
+              if value not in config:
+                  raise RuntimeError( f'Missing config credential constant: {value}' )
+
+          print( 'Sidebar AI/API credential contracts verified.' )
+          PY
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          if git diff --quiet -- app.py; then
+            echo 'No sidebar credential changes detected.'
+            exit 1
+          fi
+          git config user.name 'Terry Eppler'
+          git config user.email 'terry.eppler@gmail.com'
+          git add app.py
+          git commit -m 'Add AI provider API keys to sidebar'
+          git push origin feature/sidebar-ai-api-keys
