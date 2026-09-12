@@ -26,6 +26,13 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 | 🧠 AI/ML Processing    | Chunking, embeddings, vector stores, retrieval-ready document preparation, and agent-callable geospatial tools.                                                    |
 | 🌐 Live World Data     | Aircraft, military aircraft, satellites, vessels, fires, earthquakes, infrastructure, cameras, map layers, tracking, geofencing, replay, and cross-layer analysis. |
 
+
+## 🛸 UAP Data
+
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Bucket-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+
+UAP sightings reported to the National UFO Reporting Center (NUFORC); a U.S. non-profit organization founded in 1974 that collects, records, and archives reports of unidentified aerial phenomena (UAP) and UFO sightings.
+
 ## 🌐 Live World Data
 
 Live World Data extends Iyrin with a normalized operational geospatial layer built around the `GeoEntity` contract. Heterogeneous providers are converted into a common schema containing entity identity, type, name, latitude, longitude, altitude, heading, speed, timestamp, source, and provider-specific metadata.
