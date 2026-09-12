@@ -6412,7 +6412,8 @@ elif mode == 'Geological':
 						st.session_state[ 'geo_last_image_path' ] = ''
 		
 				st.divider( )
-				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source', 'USGS The National Map', 'geo_usgs_the_national_map' )
+				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source',
+					'USGS The National Map', 'geo_usgs_the_national_map' )
 		
 		with geo_c2:
 			render_mode_document_tabs( 'geo', '📄 Loaded' )
