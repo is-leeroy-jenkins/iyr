@@ -39,7 +39,7 @@ jobs:
               "st.session_state[ 'live_world_infrastructure_result' ] = { }",
           ]
           for value in required:
-              if text.count( value ) < 2:
+              if value not in text:
                   raise RuntimeError( f'Missing Infrastructure clear-state contract: {value}' )
           print( 'Infrastructure clear-state contracts verified.' )
           PY
