@@ -14,7 +14,7 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 | 🗺️ Interactive Mapping | Interactive geospatial visualization using PyDeck and configurable map styles.                                                                                     |
 | 📏 Distances           | Distance and travel-time calculations between origins and destinations.                                                                                            |
 | 🗺️ Static Maps         | Static map generation for reporting, embedding, and downstream workflows.                                                                                          |
-| ⏱️ Time Zones           | Coordinate-based IANA time-zone resolution.                                                                                                                        |
+| ⏱️  Time Zones          | Coordinate-based IANA time-zone resolution.                                                                                                                        |
 | 🌐 Site Crawling       | Web retrieval and crawling for text/document acquisition.                                                                                                          |
 | 🌦️ Weather             | Current, forecast, historical, and climate-oriented weather retrieval.                                                                                             |
 | 🌱 Environmental       | Air quality, UV, environmental records, active-fire, water, and natural-event data.                                                                                |
