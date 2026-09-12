@@ -134,7 +134,7 @@ jobs:
           if marker not in text:
               raise RuntimeError( 'Refresh function marker not found.' )
 
-          tracking_functions = r'''
+          tracking_functions = r"""
 
           def get_live_world_tracking_options( ) -> Dict[ str, str ]:
           	'''
@@ -268,7 +268,7 @@ jobs:
           	columns = [ 'EntityKey', 'EntityId', 'EntityType', 'Name', 'Latitude', 'Longitude',
           		'Altitude', 'Heading', 'Speed', 'Timestamp', 'ObservedAt' ]
           	return pd.DataFrame( history, columns=columns )
-          '''
+          """
           text = text.replace( marker, tracking_functions + marker, 1 )
 
           old = """\t\tst.session_state[ 'live_world_df_entities' ] = df_entities
@@ -331,16 +331,9 @@ jobs:
           \t\tcenter_latitude = float( df_map[ 'Latitude' ].median( ) )
           \t\tcenter_longitude = float( df_map[ 'Longitude' ].median( ) )
 
-          \tview_state = pdk.ViewState(
-          """
-          if old not in text:
-              old = """\tif not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
-          \t\tcenter_latitude = float( df_map[ 'Latitude' ].median( ) )
-          \t\tcenter_longitude = float( df_map[ 'Longitude' ].median( ) )
-
           \tview_state = pdk.ViewState( latitude=center_latitude, longitude=center_longitude,
           """
-              new = """\tif not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
+          new = """\tif not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
           \t\tcenter_latitude = float( df_map[ 'Latitude' ].median( ) )
           \t\tcenter_longitude = float( df_map[ 'Longitude' ].median( ) )
           \tif (st.session_state[ 'live_world_tracking' ]
@@ -350,18 +343,6 @@ jobs:
           \t\tcenter_longitude = float( df_tracking.iloc[ -1 ][ 'Longitude' ] )
 
           \tview_state = pdk.ViewState( latitude=center_latitude, longitude=center_longitude,
-          """
-          else:
-              new = """\tif not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
-          \t\tcenter_latitude = float( df_map[ 'Latitude' ].median( ) )
-          \t\tcenter_longitude = float( df_map[ 'Longitude' ].median( ) )
-          \tif (st.session_state[ 'live_world_tracking' ]
-          \t\t\tand st.session_state[ 'live_world_tracking_follow' ]
-          \t\t\tand not df_tracking.empty):
-          \t\tcenter_latitude = float( df_tracking.iloc[ -1 ][ 'Latitude' ] )
-          \t\tcenter_longitude = float( df_tracking.iloc[ -1 ][ 'Longitude' ] )
-
-          \tview_state = pdk.ViewState(
           """
           if old not in text:
               raise RuntimeError( 'View-state anchor not found.' )
