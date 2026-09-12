@@ -3098,11 +3098,9 @@ def has_loaded_dataset( df_frame: object ) -> bool:
 		bool:
 			True when the object is a non-empty dataframe with at least one column.
 	"""
-	return (
-			isinstance( df_frame, pd.DataFrame )
+	return ( isinstance( df_frame, pd.DataFrame )
 			and not df_frame.empty
-			and len( df_frame.columns ) > 0
-	)
+			and len( df_frame.columns ) > 0 )
 
 def get_loaded_dataset( ) -> pd.DataFrame | None:
 	"""
@@ -3125,7 +3123,8 @@ def get_loaded_dataset( ) -> pd.DataFrame | None:
 	
 	return df_frame.copy( )
 
-def store_loaded_dataset( df_dataset: pd.DataFrame, df_original: pd.DataFrame | None = None ) -> None:
+def store_loaded_dataset( df_dataset: pd.DataFrame,
+                          df_original: pd.DataFrame | None=None ) -> None:
 	"""
 		Purpose:
 		--------
