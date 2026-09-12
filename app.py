@@ -7161,6 +7161,5 @@ elif mode == 'Data Management':
 # ==============================================================================
 # LIVE WORLD DATA
 # ==============================================================================
-render_live_world_map(
-	latitude=get_global_latitude_default( ),
+render_live_world_map( latitude=get_global_latitude_default( ),
 	longitude=get_global_longitude_default( ) )
