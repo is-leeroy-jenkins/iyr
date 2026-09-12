@@ -2475,7 +2475,6 @@ class PowerPointLoader( Loader ):
 		"""
 		try:
 			throw_if( 'path', path )
-			
 			self.file_path = self.verify_exists( path )
 			self.mode = self._normalize_mode( mode )
 			self.loader = UnstructuredPowerPointLoader( file_path=self.file_path, mode=self.mode )

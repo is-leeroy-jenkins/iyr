@@ -29,9 +29,21 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 
 ## 🛸 UAP Data
 
-[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Bucket-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-UAP%20Sightings-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
 
-UAP sightings reported to the National UFO Reporting Center (NUFORC); a U.S. non-profit organization founded in 1974 that collects, records, and archives reports of unidentified aerial phenomena (UAP) and UFO sightings.
+- 128,975 UAP sightings reported to the National UFO Reporting Center (NUFORC) from 1906 to 2021 by country, state, city and geograpic coordinates.
+
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Superfund%20Sites-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+
+- 4,478 Pollution sites with active EPA remediations or removals by country, state, city and geograpic coordinates.
+
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Airports-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+
+- 378 IAEA nuclear power facilities by country, state, city and geograpic coordinates.
+
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Airports-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+
+- 20,142 airports by country, state, city and geograpic coordinates.
 
 ## 🌐 Live World Data
 
