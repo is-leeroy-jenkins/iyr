@@ -1,0 +1,133 @@
+name: Refine Military Provider
+
+on:
+  push:
+    branches:
+      - feature/live-world-military-vessels
+    paths:
+      - .github/workflows/refine-military-provider.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-military-vessels
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Refine ADSB.lol military retrieval
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path( 'live_world_sources.py' )
+          source = source_path.read_text( encoding='utf-8' )
+          old = """\t\tself.timeout = timeout
+          \t\tself.url = 'https://api.adsb.lol/v2/mil'
+          \t\tself.response = None
+
+          \tdef fetch_military( self ) -> Dict[ str, Any ]:
+          \t\t'''
+
+          \t\t\tPurpose:
+          \t\t\t--------
+          \t\t\tRetrieve the current ADSB.lol military-tagged aircraft payload.
+
+          \t\t\tReturns:
+          \t\t\t--------
+          \t\t\tDict[str, Any]: ADSB.lol aircraft payload containing the ac collection.
+
+          \t\t'''
+          \t\tself.response = requests.get( self.url, timeout=self.timeout )
+          \t\tself.response.raise_for_status( )
+          \t\tpayload = self.response.json( ) or { }
+          \t\tif not isinstance( payload, dict ):
+          \t\t\traise TypeError( 'ADSB.lol military response must be a dictionary.' )
+          \t\treturn payload
+          """
+          new = """\t\tself.timeout = timeout
+          \t\tself.url = 'https://api.adsb.lol/v2/point'
+          \t\tself.response = None
+
+          \tdef fetch_military( self, latitude: float, longitude: float,
+          \t\t\tradius_nm: float=250.0 ) -> Dict[ str, Any ]:
+          \t\t'''
+
+          \t\t\tPurpose:
+          \t\t\t--------
+          \t\t\tRetrieve ADSB.lol aircraft around a geographic point and retain records
+          \t\t\twhose database flags identify them as military aircraft.
+
+          \t\t\tParameters:
+          \t\t\t-----------
+          \t\t\tlatitude (float): Geographic center latitude.
+          \t\t\tlongitude (float): Geographic center longitude.
+          \t\t\tradius_nm (float): Search radius in nautical miles.
+
+          \t\t\tReturns:
+          \t\t\t--------
+          \t\t\tDict[str, Any]: ADSB.lol payload containing only military-tagged aircraft.
+
+          \t\t'''
+          \t\tthrow_if( 'latitude', latitude )
+          \t\tthrow_if( 'longitude', longitude )
+          \t\tthrow_if( 'radius_nm', radius_nm )
+          \t\tself.latitude = float( latitude )
+          \t\tself.longitude = float( longitude )
+          \t\tself.radius_nm = float( radius_nm )
+          \t\tself.request_url = (
+          \t\t\tf'{self.url}/{self.latitude:.6f}/{self.longitude:.6f}/{self.radius_nm:.1f}' )
+          \t\tself.response = requests.get( self.request_url, timeout=self.timeout )
+          \t\tself.response.raise_for_status( )
+          \t\tpayload = self.response.json( ) or { }
+          \t\tif not isinstance( payload, dict ):
+          \t\t\traise TypeError( 'ADSB.lol point response must be a dictionary.' )
+          \t\taircraft = payload.get( 'ac', [ ] ) or [ ]
+          \t\tpayload[ 'ac' ] = [
+          \t\t\trow for row in aircraft
+          \t\t\tif isinstance( row, dict ) and int( row.get( 'dbFlags', 0 ) or 0 ) & 1
+          \t\t]
+          \t\treturn payload
+          """
+          if old not in source:
+              raise RuntimeError( 'ADSB.lol provider anchor not found.' )
+          source_path.write_text( source.replace( old, new, 1 ), encoding='utf-8' )
+
+          world_path = Path( 'live_world.py' )
+          world = world_path.read_text( encoding='utf-8' )
+          old = """\tservice = AdsbLolMilitary( timeout=20 )
+          \tresult = service.fetch_military( ) or { }
+          \trows = result.get( 'ac', [ ] ) or [ ]
+          """
+          new = """\tservice = AdsbLolMilitary( timeout=20 )
+          \tresult = service.fetch_military( latitude=latitude, longitude=longitude,
+          \t\tradius_nm=radius_nm ) or { }
+          \trows = result.get( 'ac', [ ] ) or [ ]
+          """
+          if old not in world:
+              raise RuntimeError( 'Military fetch anchor not found.' )
+          world_path.write_text( world.replace( old, new, 1 ), encoding='utf-8' )
+          PY
+
+      - name: Compile Python sources
+        run: python -m py_compile app.py live_world.py live_world_sources.py
+
+      - name: Commit refinement
+        shell: bash
+        run: |
+          git config user.name "Terry Eppler"
+          git config user.email "terry.eppler@gmail.com"
+          git add live_world.py live_world_sources.py
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Refine military aircraft classification"
+          git push origin feature/live-world-military-vessels
