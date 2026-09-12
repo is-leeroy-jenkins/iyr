@@ -23,6 +23,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Repair helper clear anchor
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path( '.github/scripts/implement_live_world_agent_tools.py' )
+          text = path.read_text( encoding='utf-8' )
+          text = text.replace(
+              "\\t\\tst.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''\\n\\t\\tst.session_state[ 'live_world_last_refresh' ] = ''",
+              "\\tst.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''\\n\\tst.session_state[ 'live_world_last_refresh' ] = ''" )
+          text = text.replace(
+              "\\t\\tst.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''\\n\\t\\tst.session_state[ 'live_world_agent_result' ] = { }\\n\\t\\tst.session_state[ 'live_world_agent_last_error' ] = ''\\n\\t\\tst.session_state[ 'live_world_last_refresh' ] = ''",
+              "\\tst.session_state[ 'live_world_geofence_last_refresh_processed' ] = ''\\n\\tst.session_state[ 'live_world_agent_result' ] = { }\\n\\tst.session_state[ 'live_world_agent_last_error' ] = ''\\n\\tst.session_state[ 'live_world_last_refresh' ] = ''" )
+          path.write_text( text, encoding='utf-8' )
+          PY
+
       - name: Implement Agent Tools
         run: python .github/scripts/implement_live_world_agent_tools.py
 
@@ -41,17 +56,12 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           live_world = Path( 'live_world.py' ).read_text( encoding='utf-8' )
           tools = Path( 'live_world_agent_tools.py' ).read_text( encoding='utf-8' )
           required_live_world = [
-              "'agent_tools': '🤖 Agent Tools'",
-              "'live_world_agent_tools': False",
-              'def run_live_world_agent_tool( )',
-              "key='live_world_agent_tools'",
-              "'🤖 Agent Tools'",
-              'with agent_tools_tab:',
-          ]
+              "'agent_tools': '🤖 Agent Tools'", "'live_world_agent_tools': False",
+              'def run_live_world_agent_tool( )', "key='live_world_agent_tools'",
+              "'🤖 Agent Tools'", 'with agent_tools_tab:' ]
           required_tools = [
               'def get_live_world_status( )',
               'def list_live_world_entities( entity_type: str, limit: int )',
@@ -59,8 +69,7 @@ jobs:
               'def find_live_world_nearest( latitude: float, longitude: float, radius_nm: float,',
               'def get_live_world_geofence_status( )',
               'def get_live_world_tracking_status( )',
-              'LIVE_WORLD_AGENT_TOOLS: Dict[ str, object ]',
-          ]
+              'LIVE_WORLD_AGENT_TOOLS: Dict[ str, object ]' ]
           for value in required_live_world:
               if value not in live_world:
                   raise RuntimeError( f'Missing Agent Tools Live World contract: {value}' )
