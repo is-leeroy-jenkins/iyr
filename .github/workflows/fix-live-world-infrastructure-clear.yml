@@ -1,0 +1,58 @@
+name: Fix Live World Infrastructure Clear State
+
+on:
+  push:
+    branches:
+      - feature/live-world-infrastructure
+    paths:
+      - .github/workflows/fix-live-world-infrastructure-clear.yml
+      - .github/scripts/fix_live_world_infrastructure_clear.py
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-infrastructure
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Apply clear-state fix
+        run: python .github/scripts/fix_live_world_infrastructure_clear.py
+
+      - name: Compile Python sources
+        run: python -m compileall -q .
+
+      - name: Verify Infrastructure clear-state contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path( 'live_world.py' ).read_text( encoding='utf-8' )
+          required = [
+              "st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )",
+              "st.session_state[ 'live_world_infrastructure_result' ] = { }",
+          ]
+          for value in required:
+              if text.count( value ) < 2:
+                  raise RuntimeError( f'Missing Infrastructure clear-state contract: {value}' )
+          print( 'Infrastructure clear-state contracts verified.' )
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          if git diff --quiet -- live_world.py; then
+            echo 'No Infrastructure clear-state changes detected.'
+            exit 1
+          fi
+          git config user.name 'Terry Eppler'
+          git config user.email 'terry.eppler@gmail.com'
+          git add live_world.py
+          git commit -m 'Complete Infrastructure clear-state reset'
+          git push origin feature/live-world-infrastructure
