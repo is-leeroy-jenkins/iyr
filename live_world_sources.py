@@ -210,26 +210,47 @@ class AdsbLolMilitary:
 
 		'''
 		self.timeout = timeout
-		self.url = 'https://api.adsb.lol/v2/mil'
+		self.url = 'https://api.adsb.lol/v2/point'
 		self.response = None
 
-	def fetch_military( self ) -> Dict[ str, Any ]:
+	def fetch_military( self, latitude: float, longitude: float,
+			radius_nm: float=250.0 ) -> Dict[ str, Any ]:
 		'''
 
 			Purpose:
 			--------
-			Retrieve the current ADSB.lol military-tagged aircraft payload.
+			Retrieve ADSB.lol aircraft around a geographic point and retain records
+			whose database flags identify them as military aircraft.
+
+			Parameters:
+			-----------
+			latitude (float): Geographic center latitude.
+			longitude (float): Geographic center longitude.
+			radius_nm (float): Search radius in nautical miles.
 
 			Returns:
 			--------
-			Dict[str, Any]: ADSB.lol aircraft payload containing the ac collection.
+			Dict[str, Any]: ADSB.lol payload containing only military-tagged aircraft.
 
 		'''
-		self.response = requests.get( self.url, timeout=self.timeout )
+		throw_if( 'latitude', latitude )
+		throw_if( 'longitude', longitude )
+		throw_if( 'radius_nm', radius_nm )
+		self.latitude = float( latitude )
+		self.longitude = float( longitude )
+		self.radius_nm = float( radius_nm )
+		self.request_url = (
+			f'{self.url}/{self.latitude:.6f}/{self.longitude:.6f}/{self.radius_nm:.1f}' )
+		self.response = requests.get( self.request_url, timeout=self.timeout )
 		self.response.raise_for_status( )
 		payload = self.response.json( ) or { }
 		if not isinstance( payload, dict ):
-			raise TypeError( 'ADSB.lol military response must be a dictionary.' )
+			raise TypeError( 'ADSB.lol point response must be a dictionary.' )
+		aircraft = payload.get( 'ac', [ ] ) or [ ]
+		payload[ 'ac' ] = [
+			row for row in aircraft
+			if isinstance( row, dict ) and int( row.get( 'dbFlags', 0 ) or 0 ) & 1
+		]
 		return payload
 
 

@@ -543,7 +543,8 @@ def fetch_live_military_aircraft( latitude: float, longitude: float ) -> pd.Data
 	throw_if( 'longitude', longitude )
 	radius_nm = float( st.session_state[ 'live_world_military_radius_nm' ] )
 	service = AdsbLolMilitary( timeout=20 )
-	result = service.fetch_military( ) or { }
+	result = service.fetch_military( latitude=latitude, longitude=longitude,
+		radius_nm=radius_nm ) or { }
 	rows = result.get( 'ac', [ ] ) or [ ]
 	entities: List[ GeoEntity ] = [ ]
 
