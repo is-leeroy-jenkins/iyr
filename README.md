@@ -1,142 +1,354 @@
 ###### iyrin
+
 ![](https://github.com/is-leeroy-jenkins/iyr/blob/main/resources/images/iyrin-project.png)
 
 ___
-A Python application that integrates gis mapping functionality and scientific research APIs for use 
-in data pipelines and agentic tooling.
 
-## ✨ Features
+Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and agentic-analysis application. It combines mapping services, environmental and scientific APIs, live-world operational data, document chunking, embeddings, vector storage, geospatial analytics, and provider-neutral tool interfaces in a single application.
 
-- 🔎 **Geocoding** – Convert free-form addresses or (City, State, Country) triples into coordinates.  
-- 📏 **Distance Matrix** – Compute distance and travel time between origins and destinations.  
-- 🗺 **Static Maps** – Generate map image URLs for embedding or reporting.  
-- ⏱ **Time Zones** – Look up IANA time zones for coordinates.  
-- ⚡ **Rate Limiting & Caching** – Stay under API quotas with built-in QPS limiter and caching backends.  
-- 📊 **Excel Integration** – Enrich spreadsheets with geocoded results in a single call.  
-- 🛠 **Error Handling** – Explicit exceptions for not found, gateway failures, and more.  
-- 🧩 **Extensible** – Drop-in services for Places, Directions, or any other Maps endpoint.  
+## ✨ Core Capabilities
+
+| Capability | Functionality |
+|---|---|
+| 🔎 Geocoding | Free-form and structured address resolution to latitude/longitude coordinates. |
+| 🗺️ Interactive Mapping | Interactive geospatial visualization using PyDeck and configurable map styles. |
+| 📏 Distances | Distance and travel-time calculations between origins and destinations. |
+| 🗺️ Static Maps | Static map generation for reporting, embedding, and downstream workflows. |
+| ⏱️ Time Zones | Coordinate-based IANA time-zone resolution. |
+| 🌐 Site Crawling | Web retrieval and crawling for text/document acquisition. |
+| 🌦️ Weather | Current, forecast, historical, and climate-oriented weather retrieval. |
+| 🌱 Environmental | Air quality, UV, environmental records, active-fire, water, and natural-event data. |
+| 🌎 Geological | Earthquake, water, terrain, and geospatial science data. |
+| 🔭 Astronomical | Astronomical catalogs, solar/space-weather data, satellite data, and astronomy tooling. |
+| 🌌 Celestial Mapping | Star-map and celestial visualization functionality. |
+| 📄 Data Upload | File ingestion and processing for supported structured and document formats. |
+| 🗄️ Data Management | Local application data and persistence workflows. |
+| 🧠 AI/ML Processing | Chunking, embeddings, vector stores, retrieval-ready document preparation, and agent-callable geospatial tools. |
+| 🌐 Live World Data | Aircraft, military aircraft, satellites, vessels, fires, earthquakes, infrastructure, cameras, map layers, tracking, geofencing, replay, and cross-layer analysis. |
+
+## 🌐 Live World Data
+
+Live World Data extends Iyrin with a normalized operational geospatial layer built around the `GeoEntity` contract. Heterogeneous providers are converted into a common schema containing entity identity, type, name, latitude, longitude, altitude, heading, speed, timestamp, source, and provider-specific metadata.
+
+### Live Layers
+
+| Layer | Source / Functionality |
+|---|---|
+| ✈️ Aircraft | OpenSky Network live state vectors with configurable geographic radius and airborne filtering. |
+| 🛩️ Military Aircraft | ADSB.lol military-tagged aircraft with local nautical-mile filtering. |
+| 🛰️ Satellites | CelesTrak OMM orbital data propagated with SGP4 and converted to Earth-fixed positions. |
+| 🚢 Vessels & Ships | AIS Stream WebSocket position messages with bounded collection and geographic filtering. |
+| 📈 Earthquakes | USGS earthquake feeds with magnitude filtering and normalized event locations. |
+| 🔥 Fires | NASA FIRMS active-fire detections from VIIRS, MODIS, and Landsat sources. |
+| 📡 Infrastructure | OpenStreetMap/Overpass infrastructure features including airports, ports, power plants, dams, data centers, and military installations. |
+| 📷 CCTV / Web Cameras | OpenStreetMap/Overpass surveillance-camera and webcam locations. |
+| 🗺️ Additional Map Layers | Public transit, bike share, emergency services, healthcare, EV charging, communications, and launch sites. |
+| 🎯 Tracking & Trails | Selected moving-entity tracking with persisted in-session path history and optional map following. |
+| 📏 Measurements & Annotations | Great-circle distance, bearing, custom points, entity-to-entity measurements, and map annotations. |
+
+### Cross-Layer Spatial Analysis
+
+- Configurable origin from current location, custom point, or loaded entity.
+- Radius-based search across normalized entity types.
+- Great-circle distance and bearing calculations.
+- Nearest-entity and nearest-by-type analysis.
+- Cross-layer results without re-fetching provider data when only analysis parameters change.
+- Map highlighting for entities inside the active analysis radius.
+
+### Geofencing
+
+- Configurable circular geofence origin and radius.
+- Entity-type filtering across operational Live World layers.
+- Current inside/outside membership calculation.
+- Entry and exit transition events tied to explicit Live World refreshes.
+- Baseline initialization without false entry events.
+- Bounded event history and dedicated geofence result tables.
+
+### Historical Replay & Persistence
+
+- SQLite persistence of normalized Live World refreshes.
+- Configurable retention period.
+- Replay windows from one hour through all retained observations.
+- Entity-type filtering and bounded replay record counts.
+- Snapshot selection from persisted observation timestamps.
+- Historical moving-entity paths for aircraft, military aircraft, satellites, and vessels.
+- Historical position overlays for static and moving entities.
+
+## 🧠 AI / ML Functionality
+
+### Document-to-Vector Pipeline
+
+Iyrin converts supported API results, crawled web content, and loaded document text into LangChain `Document` objects. The processing pipeline is designed for retrieval-augmented generation, semantic search, downstream agent context, and ML feature preparation.
+
+```text
+Source / API Result
+        │
+        ▼
+LangChain Document
+        │
+        ▼
+Recursive Text Chunking
+        │
+        ▼
+Embedding Model
+        │
+        ▼
+Embedding Vectors
+        │
+        ├──────────────► Chroma
+        │
+        └──────────────► Pinecone
+```
+
+### Chunking & Token-Oriented Preparation
+
+- `RecursiveCharacterTextSplitter` document segmentation.
+- Configurable chunk size and overlap.
+- Stable chunk identifiers written to document metadata.
+- Processing-state isolation by application mode/source.
+- Automatic invalidation of downstream embeddings when chunk settings change.
+- Loaded-document, chunk, and embedding inspection tabs.
+
+### Embedding Providers
+
+| Provider | Supported Models / Mode |
+|---|---|
+| OpenAI | `text-embedding-3-small`, `text-embedding-3-large` |
+| Google Generative AI | `gemini-embedding-2-preview` |
+| Mistral AI | `mistral-embed` |
+| Hugging Face | `sentence-transformers/all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2` |
+| Local GGUF | Local embedding-capable GGUF models through `llama-cpp-python` |
+
+### Embedding Validation
+
+- One vector per document chunk.
+- Consistent embedding dimensionality across a batch.
+- Finite numeric-value validation.
+- Provider/model tracking in Streamlit session state.
+- Local GGUF model-file validation before model loading.
+
+### Vector Storage
+
+| Backend | Functionality |
+|---|---|
+| Chroma | Local persistent vector collections with configurable persistence directory. |
+| Pinecone | Remote vector indexes with optional namespaces. |
+
+Vectorized content is prepared for semantic retrieval, RAG pipelines, contextual search, and agent grounding.
+
+### Agentic Tool Surface
+
+`tools.py` exposes provider-neutral, JSON-serializable geospatial functions suitable for tool-calling integrations. The tool layer operates against normalized Live World session state rather than provider-specific payload formats.
+
+Supported tool-oriented operations include:
+
+- Live World operational status.
+- Entity listing by normalized type.
+- Entity search by identifier or name.
+- Coordinate-to-entity nearest-neighbor queries.
+- Great-circle distance calculations.
+- Bearing calculations.
+- Cross-layer geospatial context suitable for downstream agent reasoning.
+
+The tool surface is intentionally decoupled from any single agent SDK. Provider registration can be performed by an external agent framework without changing the underlying Iyrin geospatial implementation.
+
+### Geospatial Intelligence for AI/ML
+
+The normalized `GeoEntity` model provides a consistent analytical feature surface across aircraft, military aircraft, satellites, vessels, earthquakes, fires, infrastructure, cameras, and additional map features.
+
+Available features include:
+
+- latitude and longitude;
+- altitude/depth where applicable;
+- heading;
+- speed;
+- observation timestamp;
+- source identity;
+- entity type;
+- provider metadata;
+- derived distance;
+- derived bearing;
+- geofence membership;
+- entry/exit transitions;
+- historical position sequences;
+- tracking trails;
+- cross-layer proximity relationships.
+
+These features support downstream clustering, anomaly detection, classification, trajectory analysis, spatial-temporal modeling, semantic retrieval, and agentic decision-support workflows. Iyrin provides the data normalization, embedding, vectorization, spatial-analysis, persistence, and tool interfaces required for these workflows; supervised model training is not performed automatically by the application.
+
+## 🔬 Scientific & Operational Data Sources
+
+### Weather & Climate
+
+- Google Weather
+- Open-Meteo
+- Historical Weather
+- NOAA Climate Data
+- NOAA Tides & Currents
+
+### Environmental
+
+- EPA AirNow
+- OpenAQ
+- PurpleAir
+- EPA Envirofacts
+- EPA UV Index
+- NASA FIRMS
+- NASA EONET
+- USGS Water Data
+
+### Geological & Geospatial
+
+- USGS Earthquakes
+- USGS National Map
+- Global imagery and geospatial services
+
+### Astronomical & Space
+
+- Astropy / Astroquery
+- Open Astronomy Catalog
+- NASA scientific data sources
+- CelesTrak satellite orbital data
+- Space-weather services
+- Naval Observatory data
+- Celestial/star-map services
+
+### Live Operational Sources
+
+- OpenSky Network
+- ADSB.lol
+- AIS Stream
+- CelesTrak
+- OpenStreetMap Overpass
+- NASA FIRMS
+- USGS Earthquakes
+
+## 🗺️ Additional Map Layers
+
+OpenStreetMap/Overpass map-feature retrieval supports:
+
+- 🚇 Public Transit
+- 🚲 Bike Share
+- 🚨 Emergency Services
+- 🏥 Healthcare
+- 🔌 EV Charging
+- 📡 Communications
+- 🚀 Launch Sites
+
+Additional map features are normalized as `Map Feature` entities and participate in the same Cross-Layer Analysis, Geofencing, Historical Replay, SQLite persistence, and map-rendering paths used by the other Live World layers.
 
 ## 📦 Installation
 
-Clone the repository and install dependencies:
-```
-  pip install -r requirements.txt
-  
-```
-
-#### **Dependencies**:
-- `requests` – robust HTTP client  
-- `pandas` – spreadsheet data processing  
-- `openpyxl` – Excel I/O (.xlsx files)  
-
-## 🚀 Quick Start
-
-### 1. Initialize Maps
-```
-    from iyrin import Maps
-
-    maps = Maps(api_key="YOUR_API_KEY")
+```powershell
+ git clone https://github.com/is-leeroy-jenkins/iyr.git
+ cd iyr
+ python -m venv .venv
+ .\.venv\Scripts\Activate.ps1
+ python -m pip install --upgrade pip
+ pip install -r requirements.txt
 ```
 
-### 2. Geocode an address
+## 🚀 Run
 
-```    
-    from iyrin import Geocoder
-
-    geo = Geocoder(maps)
-    result = geo.freeform("Paris, France")
-    print(result["lat"], result["lng"], result["formatted_address"])
+```powershell
+streamlit run app.py
 ```
 
-### 3. Calculate distance
+## 🔑 Configuration
 
-```    
-    from iyrin import DistanceMatrix
+Iyrin reads provider credentials from environment variables where required.
 
-    dist = DistanceMatrix(maps)
-    d = dist.summary("New York, USA", "Los Angeles, USA", mode="driving")
-    print(d["distance_text"], d["duration_text"])
- ```
-
-### 4. Get a static map URL
-
-```    
-    from iyrin import StaticMapURL
-
-    sm = StaticMapURL(api_key="YOUR_API_KEY")
-    url = sm.pin(lat=48.8584, lng=2.2945, zoom=14)
-    print(url)
-```
-
-### 5. Process Excel locations
-
-```    
-    from iyrin import Excel
-
-    excel = Excel(api_key="YOUR_API_KEY")
-    excel.enrich(
-        input_path="locations.xlsx",
-        output_path="locations_with_coords.xlsx",
-        city_col="City",
-        state_col="State",
-        country_col="Country"
-    )
-```
-
+| Environment Variable | Service |
+|---|---|
+| `GOOGLE_API_KEY` | Google APIs |
+| `GOOGLEMAPS_API_KEY` | Google Maps |
+| `GOOGLE_WEATHER_API_KEY` | Google Weather |
+| `NASA_API_KEY` | NASA APIs |
+| `NASA_EARTHDATA_TOKEN` | NASA Earthdata |
+| `FIRMS_MAP_KEY` | NASA FIRMS |
+| `AIRNOW_API_KEY` | EPA AirNow |
+| `OPENAQ_API_KEY` | OpenAQ |
+| `PURPLEAIR_API_KEY` | PurpleAir |
+| `OPENSKY_API_CLIENT_ID` | OpenSky OAuth client ID |
+| `OPENSKY_API_CREDENTIALS` | OpenSky OAuth client credentials |
+| `AISSTREAM_API_KEY` | AIS Stream |
+| `PINECONE_API_KEY` | Pinecone vector storage |
 
 ## 📂 Project Structure
 
-    iyrin/
-     ├── __init__.py        # Public interface
-     ├── maps.py            # Maps (API gateway)
-     ├── geocode.py         # Address → coordinates
-     ├── places.py          # Places text search fallback
-     ├── distance.py        # Distance Matrix API
-     ├── timezone.py        # Time zone resolution
-     ├── staticmaps.py      # Static map URL generator
-     ├── excel.py           # Excel integration helpers
-     ├── caching.py         # InMemoryCache & SQLiteCache
-     ├── rate.py            # Rate limiter
-     └── exceptions.py      # Custom errors
+```text
+iyr/
+├── app.py                  Streamlit application
+├── config.py               Application configuration and API metadata
+├── world.py                Live World UI, normalization, analysis, rendering, and state
+├── sources.py              Live operational provider clients
+├── history.py              Live World SQLite persistence and replay
+├── tools.py                Provider-neutral agent/tool-calling functions
+├── processing.py           Chunking, embedding, and vector-storage workflows
+├── embedders.py            Embedding providers and local GGUF embeddings
+├── fetchers.py             Scientific, environmental, weather, and web providers
+├── maps.py                 Mapping gateway
+├── geocode.py              Geocoding
+├── distances.py            Distance Matrix functionality
+├── timezones.py            Time-zone resolution
+├── staticmaps.py           Static map generation
+├── places.py               Place lookup
+├── excel.py                Spreadsheet integration
+├── caches.py               Cache implementations
+├── stores/
+│   ├── vector.py           Chroma and Pinecone vector-store wrappers
+│   ├── sqlite/             SQLite application persistence
+│   └── csv/                CSV-backed storage
+└── resources/              Images and application assets
+```
 
+## ⚙️ Processing Architecture
 
+```text
+Scientific / Operational APIs
+            │
+            ├──────────────► Streamlit UI
+            │
+            ├──────────────► Pandas DataFrames
+            │
+            ├──────────────► GeoEntity normalization
+            │                       │
+            │                       ├────────► PyDeck rendering
+            │                       ├────────► Tracking / trails
+            │                       ├────────► Cross-layer analysis
+            │                       ├────────► Geofencing
+            │                       ├────────► Historical persistence
+            │                       └────────► Agent tools
+            │
+            └──────────────► LangChain Documents
+                                    │
+                                    ├────────► Chunking
+                                    ├────────► Embeddings
+                                    └────────► Chroma / Pinecone
+```
 
-## ⚠️ Error Handling
+## 💡 Use Cases
 
-- **NotFound** – Raised when a location cannot be resolved.  
-- **GatewayError** – Raised when HTTP/API communication fails.  
-- **iyrinError** – Base class for all framework exceptions.  
-
-###### By catching these explicitly, you can gracefully handle errors in bulk geocoding or API calls.
-
-
-
-## 💡 Design Philosophy
-
-- **Simplicity first**: Every class has a single clear responsibility.  
-- **Composable**: Services like `Geocoder`, `DistanceMatrix`, `StaticMapURL` can be used alone or together.  
-- **Cache-friendly**: Optional `InMemoryCache` or `SQLiteCache` save API calls and reduce cost.  
-- **Rate-aware**: Built-in `RateLimiter` keeps calls under quota.  
-- **Spreadsheet-ready**: The `Excel` service directly reads/writes `.csv` or `.xlsx`.  
-
-
-
-## 🧪 Example Use Cases
-
-- Enriching a customer database with GPS coordinates.  
-- Calculating commute distances for IMT relocation analysis.  
-- Creating static map thumbnails for property listings.  
-- Validating and normalizing international addresses.  
-- Auditing time zone coverage for scheduling software.  
-
-
+- Live operational geospatial monitoring.
+- Aircraft, vessel, and satellite situational awareness.
+- Wildfire and earthquake monitoring.
+- Infrastructure and public-camera mapping.
+- Emergency-service and healthcare proximity analysis.
+- Cross-domain geospatial intelligence.
+- Geofence event detection.
+- Historical movement replay.
+- Environmental and scientific research workflows.
+- Semantic indexing of scientific/API results.
+- Retrieval-augmented generation preparation.
+- Agent grounding with normalized geospatial context.
+- Local/private embedding workflows using GGUF models.
+- Vector-search dataset creation with Chroma or Pinecone.
+- Spreadsheet and reporting enrichment.
 
 ## 📜 License
 
-iyrin is available via the MIT License [here](https://github.com/is-leeroy-jenkins/iyrin/blob/master/LICENSE.txt).  
+Iyrin is available under the MIT License: [LICENSE.txt](https://github.com/is-leeroy-jenkins/iyr/blob/main/LICENSE.txt).
 
+## 🙏 Acknowledgements
 
-
-
-
-
+- [God's Eye View](https://github.com/bilawalsidhu/gods-eye-view) — architectural and functional inspiration for Iyrin's Live World Data capabilities.
