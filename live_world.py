@@ -13,8 +13,8 @@ Purpose:
     Live World Data functionality inspired by God's Eye View while preserving Iyr's
     existing GIS modes and execution paths. The module provides isolated sidebar state,
     live aircraft, satellite, earthquake, and active-fire retrieval, normalized geospatial
-    entities, operational PyDeck rendering, refresh controls, filtering, and source-data
-    inspection.
+    entities, operational PyDeck rendering, entity tracking and trails, refresh controls,
+    filtering, and source-data inspection.
 ******************************************************************************************
 '''
 
@@ -38,6 +38,7 @@ LIVE_WORLD_LAYERS: Dict[ str, str ] = {
 	'satellites': '🛰️ Satellites',
 	'earthquakes': '📈 Earthquakes',
 	'fires': '🔥 Fires (Wildfires)',
+	'tracking': '🎯 Tracking & Trails',
 }
 
 LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
@@ -45,7 +46,6 @@ LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
 	'vessels': '🚢 Vessels & Ships',
 	'cameras': '📷 CCTV / Web Cameras',
 	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
-	'tracking': '🎯 Tracking & Trails',
 	'measurements': '📏 Measurements & Annotations',
 	'map_layers': '🗺️ Additional Map Layers',
 }
@@ -145,6 +145,12 @@ def initialize_live_world_state( ) -> None:
 		'live_world_firms_source': 'VIIRS_SNPP_NRT',
 		'live_world_firms_day_range': 1,
 		'live_world_firms_area_mode': 'Local Bounding Box',
+		'live_world_tracking': False,
+		'live_world_tracking_entity': '',
+		'live_world_tracking_active_entity': '',
+		'live_world_tracking_follow': True,
+		'live_world_tracking_max_points': 100,
+		'live_world_tracking_history': [ ],
 		'live_world_refresh_requested': False,
 		'live_world_last_refresh': '',
 		'live_world_last_error': '',
@@ -245,6 +251,25 @@ def render_live_world_sidebar( ) -> None:
 			st.selectbox( 'Fire Area', options=[ 'Local Bounding Box', 'World' ],
 				key='live_world_firms_area_mode' )
 
+		st.checkbox( LIVE_WORLD_LAYERS[ 'tracking' ], key='live_world_tracking' )
+		if st.session_state[ 'live_world_tracking' ]:
+			tracking_options = get_live_world_tracking_options( )
+			if tracking_options:
+				tracking_keys = list( tracking_options.keys( ) )
+				if st.session_state[ 'live_world_tracking_entity' ] not in tracking_keys:
+					st.session_state[ 'live_world_tracking_entity' ] = tracking_keys[ 0 ]
+				st.selectbox( 'Tracked Entity', options=tracking_keys,
+					format_func=lambda value: tracking_options[ value ],
+					key='live_world_tracking_entity' )
+			else:
+				st.info( 'Refresh Aircraft or Satellites before selecting a tracked entity.' )
+			st.checkbox( 'Follow Tracked Entity', key='live_world_tracking_follow' )
+			st.slider( 'Trail Points', min_value=10, max_value=500, step=10,
+				key='live_world_tracking_max_points' )
+			if st.button( 'Clear Trail', icon='🧹', key='live_world_tracking_clear',
+					width='stretch' ):
+				clear_live_world_tracking( )
+
 		st.divider( )
 		refresh_c1, clear_c2 = st.columns( 2 )
 		with refresh_c1:
@@ -288,6 +313,8 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_satellite_result' ] = [ ]
 	st.session_state[ 'live_world_earthquake_result' ] = { }
 	st.session_state[ 'live_world_firms_result' ] = { }
+	st.session_state[ 'live_world_tracking_history' ] = [ ]
+	st.session_state[ 'live_world_tracking_active_entity' ] = ''
 	st.session_state[ 'live_world_last_refresh' ] = ''
 	st.session_state[ 'live_world_last_error' ] = ''
 	st.session_state[ 'live_world_refresh_requested' ] = False
@@ -696,6 +723,140 @@ def entities_to_dataframe( entities: List[ GeoEntity ] ) -> pd.DataFrame:
 	return pd.DataFrame( rows, columns=columns )
 
 
+
+def get_live_world_tracking_options( ) -> Dict[ str, str ]:
+	'''
+
+		Purpose:
+		--------
+		Return selectable moving entities from the current Live World entity frame.
+
+		Returns:
+		--------
+		Dict[str, str]: Tracking keys mapped to human-readable labels.
+
+	'''
+	initialize_live_world_state( )
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	if df_entities is None or df_entities.empty:
+		return { }
+
+	required = [ 'EntityId', 'EntityType', 'Name' ]
+	if any( column not in df_entities.columns for column in required ):
+		return { }
+
+	df_tracking = df_entities[ df_entities[ 'EntityType' ].isin(
+		[ 'Aircraft', 'Satellite' ] ) ].copy( )
+	options: Dict[ str, str ] = { }
+	for _, row in df_tracking.iterrows( ):
+		entity_id = str( row[ 'EntityId' ] )
+		entity_type = str( row[ 'EntityType' ] )
+		name = str( row[ 'Name' ] )
+		tracking_key = f'{entity_type}::{entity_id}'
+		options[ tracking_key ] = f'{entity_type} | {name} | {entity_id}'
+	return options
+
+
+def clear_live_world_tracking( ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Clear the current tracking trail without changing the selected tracked entity.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	st.session_state[ 'live_world_tracking_history' ] = [ ]
+	st.session_state[ 'live_world_tracking_active_entity' ] = ''
+
+
+def update_live_world_tracking( df_entities: pd.DataFrame ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Append the selected moving entity's newest position to its in-session trail.
+
+		Parameters:
+		-----------
+		df_entities (pd.DataFrame): Current normalized Live World entity records.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'df_entities', df_entities )
+	if not st.session_state[ 'live_world_tracking' ]:
+		return
+
+	tracking_key = str( st.session_state.get( 'live_world_tracking_entity', '' ) or '' )
+	if not tracking_key or '::' not in tracking_key or df_entities.empty:
+		return
+
+	entity_type, entity_id = tracking_key.split( '::', 1 )
+	df_match = df_entities[
+		(df_entities[ 'EntityType' ].astype( str ) == entity_type)
+		& (df_entities[ 'EntityId' ].astype( str ) == entity_id) ].copy( )
+	if df_match.empty:
+		return
+
+	active_entity = str( st.session_state.get(
+		'live_world_tracking_active_entity', '' ) or '' )
+	if active_entity != tracking_key:
+		st.session_state[ 'live_world_tracking_history' ] = [ ]
+		st.session_state[ 'live_world_tracking_active_entity' ] = tracking_key
+
+	row = df_match.iloc[ 0 ]
+	point = {
+		'EntityKey': tracking_key,
+		'EntityId': str( row[ 'EntityId' ] ),
+		'EntityType': str( row[ 'EntityType' ] ),
+		'Name': str( row[ 'Name' ] ),
+		'Latitude': float( row[ 'Latitude' ] ),
+		'Longitude': float( row[ 'Longitude' ] ),
+		'Altitude': float( row[ 'Altitude' ] ),
+		'Heading': float( row[ 'Heading' ] ),
+		'Speed': float( row[ 'Speed' ] ),
+		'Timestamp': str( row[ 'Timestamp' ] ),
+		'ObservedAt': dt.datetime.now( dt.timezone.utc ).isoformat( ),
+	}
+
+	history = list( st.session_state.get( 'live_world_tracking_history', [ ] ) or [ ] )
+	if history:
+		previous = history[ -1 ]
+		if (float( previous[ 'Latitude' ] ) == point[ 'Latitude' ]
+				and float( previous[ 'Longitude' ] ) == point[ 'Longitude' ]):
+			return
+
+	history.append( point )
+	max_points = int( st.session_state[ 'live_world_tracking_max_points' ] )
+	st.session_state[ 'live_world_tracking_history' ] = history[ -max_points: ]
+
+
+def get_live_world_tracking_frame( ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Return the current tracking trail as a DataFrame for rendering and inspection.
+
+		Returns:
+		--------
+		pd.DataFrame: Ordered tracking trail points.
+
+	'''
+	initialize_live_world_state( )
+	history = list( st.session_state.get( 'live_world_tracking_history', [ ] ) or [ ] )
+	columns = [ 'EntityKey', 'EntityId', 'EntityType', 'Name', 'Latitude', 'Longitude',
+		'Altitude', 'Heading', 'Speed', 'Timestamp', 'ObservedAt' ]
+	return pd.DataFrame( history, columns=columns )
+
 def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame:
 	'''
 
@@ -755,6 +916,7 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 		df_entities = pd.concat( frames,
 			ignore_index=True ) if frames else entities_to_dataframe( [ ] )
 		st.session_state[ 'live_world_df_entities' ] = df_entities
+		update_live_world_tracking( df_entities )
 		st.session_state[ 'live_world_last_refresh' ] = dt.datetime.now( ).strftime(
 			'%Y-%m-%d %H:%M:%S' )
 		st.session_state[ 'live_world_refresh_requested' ] = False
@@ -895,11 +1057,35 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			line_width_min_pixels=1, radius_min_pixels=4, radius_max_pixels=28,
 			filled=True, stroked=True, pickable=True ) )
 
+	df_tracking = get_live_world_tracking_frame( )
+	if st.session_state[ 'live_world_tracking' ] and not df_tracking.empty:
+		if len( df_tracking ) > 1:
+			path_data = [ {
+				'Path': df_tracking[ [ 'Longitude', 'Latitude' ] ].values.tolist( ) } ]
+			layers.append( pdk.Layer(
+				'PathLayer', data=path_data, get_path='Path',
+				get_color=[ 0, 255, 170, 235 ], get_width=5,
+				width_min_pixels=2, width_max_pixels=8, pickable=False ) )
+
+		df_tracked_point = df_tracking.tail( 1 ).copy( )
+		df_tracked_point[ 'Radius' ] = 15000.0 * point_scale
+		layers.append( pdk.Layer(
+			'ScatterplotLayer', data=df_tracked_point,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 0, 255, 170, 80 ], get_line_color=[ 0, 255, 170, 255 ],
+			line_width_min_pixels=3, radius_min_pixels=10, radius_max_pixels=40,
+			filled=True, stroked=True, pickable=False ) )
+
 	center_latitude = float( latitude )
 	center_longitude = float( longitude )
 	if not (-90.0 <= center_latitude <= 90.0 and -180.0 <= center_longitude <= 180.0):
 		center_latitude = float( df_map[ 'Latitude' ].median( ) )
 		center_longitude = float( df_map[ 'Longitude' ].median( ) )
+	if (st.session_state[ 'live_world_tracking' ]
+			and st.session_state[ 'live_world_tracking_follow' ]
+			and not df_tracking.empty):
+		center_latitude = float( df_tracking.iloc[ -1 ][ 'Latitude' ] )
+		center_longitude = float( df_tracking.iloc[ -1 ][ 'Longitude' ] )
 
 	view_state = pdk.ViewState( latitude=center_latitude, longitude=center_longitude,
 		zoom=int( st.session_state[ 'live_world_zoom' ] ), pitch=0 )
@@ -921,8 +1107,9 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, satellites_tab, earthquakes_tab, fires_tab = st.tabs(
-		[ '🌐 Entities', '✈️ Aircraft', '🛰️ Satellites', '📈 Earthquakes', '🔥 Fires' ] )
+	entities_tab, aircraft_tab, satellites_tab, earthquakes_tab, fires_tab, tracking_tab = st.tabs(
+		[ '🌐 Entities', '✈️ Aircraft', '🛰️ Satellites', '📈 Earthquakes', '🔥 Fires',
+			'🎯 Tracking' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -963,6 +1150,17 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			st.data_editor( make_live_world_display_frame( df_fire_records ),
 				key='live_world_fire_table', use_container_width=True,
 				disabled=True, hide_index=True )
+
+	with tracking_tab:
+		if df_tracking.empty:
+			st.info( 'No tracking trail has been recorded. Select an aircraft or satellite and Refresh.' )
+		else:
+			tracking_c1, tracking_c2, tracking_c3 = st.columns( 3, border=True )
+			tracking_c1.metric( 'Trail Points', f'{len( df_tracking ):,}' )
+			tracking_c2.metric( 'Entity', str( df_tracking.iloc[ -1 ][ 'Name' ] ) )
+			tracking_c3.metric( 'Type', str( df_tracking.iloc[ -1 ][ 'EntityType' ] ) )
+			st.data_editor( df_tracking, key='live_world_tracking_table',
+				use_container_width=True, disabled=True, hide_index=True )
 
 
 def get_metadata_number( metadata: object, key: str, default: float=0.0 ) -> float:
