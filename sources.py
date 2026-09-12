@@ -792,3 +792,162 @@ class OverpassCameras:
 			return 'CCTV / Surveillance'
 		return ''
 
+class OverpassMapLayers:
+	'''
+
+		Purpose:
+		--------
+		Retrieve contextual public map features from OpenStreetMap through the Overpass API.
+
+	'''
+	timeout: int
+	url: str
+	response: Response | None
+	category_filters: Dict[ str, List[ str ] ]
+
+	def __init__( self, timeout: int=30 ) -> None:
+		'''
+
+			Purpose:
+			--------
+			Initialize OpenStreetMap Overpass contextual map-layer access.
+
+			Parameters:
+			-----------
+			timeout (int): HTTP timeout in seconds.
+
+			Returns:
+			--------
+			None
+
+		'''
+		self.timeout = timeout
+		self.url = 'https://overpass-api.de/api/interpreter'
+		self.response = None
+		self.category_filters = {
+			'Public Transit': [ '["public_transport"="station"]', '["railway"="station"]' ],
+			'Bike Share': [ '["amenity"="bicycle_rental"]' ],
+			'Emergency Services': [ '["amenity"="police"]', '["amenity"="fire_station"]' ],
+			'Healthcare': [ '["amenity"="hospital"]', '["amenity"="clinic"]' ],
+			'EV Charging': [ '["amenity"="charging_station"]' ],
+			'Communications': [
+				'["man_made"="tower"]["tower:type"="communication"]',
+				'["man_made"="mast"]["tower:type"="communication"]' ],
+			'Launch Sites': [ '["aeroway"="spaceport"]', '["man_made"="launch_pad"]' ],
+		}
+
+	def fetch_features( self, latitude: float, longitude: float, radius_km: float,
+			categories: List[ str ], max_results: int ) -> Dict[ str, Any ]:
+		'''
+
+			Purpose:
+			--------
+			Retrieve selected contextual map features within a circular search radius.
+
+			Parameters:
+			-----------
+			latitude (float): Search-origin latitude.
+			longitude (float): Search-origin longitude.
+			radius_km (float): Search radius in kilometers.
+			categories (List[str]): Contextual map categories to retrieve.
+			max_results (int): Maximum normalized Overpass elements to return.
+
+			Returns:
+			--------
+			Dict[str, Any]: Overpass elements with an added MapLayerCategory field.
+
+		'''
+		throw_if( 'latitude', latitude )
+		throw_if( 'longitude', longitude )
+		throw_if( 'radius_km', radius_km )
+		throw_if( 'categories', categories )
+		throw_if( 'max_results', max_results )
+		self.latitude = float( latitude )
+		self.longitude = float( longitude )
+		self.radius_km = float( radius_km )
+		self.categories = list( categories )
+		self.max_results = int( max_results )
+		if self.latitude < -90.0 or self.latitude > 90.0:
+			raise ValueError( 'Argument "latitude" must be between -90 and 90.' )
+		if self.longitude < -180.0 or self.longitude > 180.0:
+			raise ValueError( 'Argument "longitude" must be between -180 and 180.' )
+		if self.radius_km <= 0.0:
+			raise ValueError( 'Argument "radius_km" must be greater than zero.' )
+		if self.max_results < 1:
+			raise ValueError( 'Argument "max_results" must be greater than zero.' )
+		for category in self.categories:
+			if category not in self.category_filters:
+				raise ValueError( f'Unsupported map layer category: {category}' )
+
+		radius_meters = int( self.radius_km * 1000.0 )
+		selectors: List[ str ] = [ ]
+		for category in self.categories:
+			for tag_filter in self.category_filters[ category ]:
+				selectors.append(
+					f'nwr(around:{radius_meters},{self.latitude:.6f},{self.longitude:.6f})'
+					f'{tag_filter};' )
+		query = '[out:json][timeout:25];(' + ''.join( selectors ) + ');out center tags qt;'
+		self.response = requests.post( self.url, data={ 'data': query }, timeout=self.timeout )
+		self.response.raise_for_status( )
+		payload = self.response.json( ) or { }
+		if not isinstance( payload, dict ):
+			raise TypeError( 'Overpass map-layer response must be a dictionary.' )
+		elements = payload.get( 'elements', [ ] ) or [ ]
+		if not isinstance( elements, list ):
+			raise TypeError( 'Overpass map-layer elements must be a list.' )
+
+		rows: List[ Dict[ str, Any ] ] = [ ]
+		seen: set[ str ] = set( )
+		for element in elements:
+			if not isinstance( element, dict ):
+				continue
+			tags = element.get( 'tags', { } ) or { }
+			category = self.classify_feature( tags )
+			if not category or category not in self.categories:
+				continue
+			entity_key = f'{element.get( "type", "" )}:{element.get( "id", "" )}'
+			if entity_key in seen:
+				continue
+			seen.add( entity_key )
+			row = dict( element )
+			row[ 'MapLayerCategory' ] = category
+			rows.append( row )
+			if len( rows ) >= self.max_results:
+				break
+		payload[ 'elements' ] = rows
+		return payload
+
+	def classify_feature( self, tags: Dict[ str, Any ] ) -> str:
+		'''
+
+			Purpose:
+			--------
+			Classify one OpenStreetMap feature into a supported contextual map category.
+
+			Parameters:
+			-----------
+			tags (Dict[str, Any]): OpenStreetMap feature tags.
+
+			Returns:
+			--------
+			str: Contextual map category, or an empty string when unsupported.
+
+		'''
+		throw_if( 'tags', tags )
+		if tags.get( 'aeroway' ) == 'spaceport' or tags.get( 'man_made' ) == 'launch_pad':
+			return 'Launch Sites'
+		if tags.get( 'amenity' ) == 'bicycle_rental':
+			return 'Bike Share'
+		if tags.get( 'amenity' ) in [ 'police', 'fire_station' ]:
+			return 'Emergency Services'
+		if tags.get( 'amenity' ) in [ 'hospital', 'clinic' ]:
+			return 'Healthcare'
+		if tags.get( 'amenity' ) == 'charging_station':
+			return 'EV Charging'
+		if tags.get( 'public_transport' ) == 'station' or tags.get( 'railway' ) == 'station':
+			return 'Public Transit'
+		if (tags.get( 'man_made' ) in [ 'tower', 'mast' ]
+				and tags.get( 'tower:type' ) == 'communication'):
+			return 'Communications'
+		return ''
+
