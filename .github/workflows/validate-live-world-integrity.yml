@@ -1,0 +1,77 @@
+name: Validate Live World Integrity
+
+on:
+  push:
+    branches:
+      - feature/live-world-cross-layer
+    paths:
+      - .github/workflows/validate-live-world-integrity.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-cross-layer
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Check conflict markers
+        shell: bash
+        run: |
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' --include='*.py' --include='*.toml' --include='*.yml' --include='*.yaml' --include='*.md' . --exclude-dir=.git; then
+            echo 'Unresolved merge markers found.'
+            exit 1
+          fi
+
+      - name: Compile Python sources
+        run: python -m compileall -q .
+
+      - name: Verify Live World integration contracts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          app = Path( 'app.py' ).read_text( encoding='utf-8' )
+          live_world = Path( 'live_world.py' ).read_text( encoding='utf-8' )
+          sources = Path( 'live_world_sources.py' ).read_text( encoding='utf-8' )
+          requirements = Path( 'requirements.txt' ).read_text( encoding='utf-8' )
+
+          required_app = [
+              'from live_world import render_live_world_map, render_live_world_sidebar',
+              'render_live_world_sidebar( )',
+              'render_live_world_map( latitude=get_global_latitude_default( ),',
+          ]
+          required_live_world = [
+              "'measurements': '📏 Measurements & Annotations'",
+              'def get_live_world_measurement_options( )',
+              'def calculate_live_world_measurement( latitude: float, longitude: float )',
+              'def add_live_world_annotation( )',
+              'def render_live_world_map( latitude: float, longitude: float )',
+          ]
+          required_sources = [
+              'class OpenSkyLive',
+              'class AdsbLolMilitary',
+              'class CelesTrakLive',
+              'class AisStreamLive',
+          ]
+          required_requirements = [ 'sgp4', 'websocket-client' ]
+
+          for value in required_app:
+              if value not in app:
+                  raise RuntimeError( f'Missing app integration contract: {value}' )
+          for value in required_live_world:
+              if value not in live_world:
+                  raise RuntimeError( f'Missing Live World contract: {value}' )
+          for value in required_sources:
+              if value not in sources:
+                  raise RuntimeError( f'Missing Live World source contract: {value}' )
+          for value in required_requirements:
+              if value not in requirements:
+                  raise RuntimeError( f'Missing dependency contract: {value}' )
+
+          print( 'Repository integrity checks passed.' )
+          PY
