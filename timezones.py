@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                timezones.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="timezones.py" company="Terry D. Eppler">
 
-	     ayin is a python framework encapsulating the Google Maps functionality.
+	     Iyrin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -148,7 +148,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'validate_coordinates( self, lat: float, lng: float )'
 			raise exception
@@ -191,7 +191,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'lookup( self, lat: float, lng: float )'
 			raise exception
@@ -224,7 +224,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'get_id( self, lat: float, lng: float )'
 			raise exception
@@ -264,7 +264,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'offset_hours( self, lat: float, lng: float )'
 			raise exception
@@ -332,7 +332,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'local_time( self, lat: float, lng: float, utc_datetime: Optional[ dt.datetime ]=None )'
 			raise exception
@@ -417,7 +417,7 @@ class Timezone:
 		
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Timezone'
 			exception.method = 'batch_lookup( self, rows: list, lat_field: str=lat, lng_field: str=lng )'
 			raise exception

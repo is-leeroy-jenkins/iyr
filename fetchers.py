@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                fetchers.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file='fetchers.py' company='Terry D. Eppler'>
 
-	     ayin is a GIS Toolkit written in python
+	     Iyrin is a GIS Toolkit written in python
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy

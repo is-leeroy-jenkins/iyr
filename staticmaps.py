@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                staticmaps.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="staticmaps.py" company="Terry D. Eppler">
 
-	     ayin is a python framework encapsulating the Google Maps functionality.
+	     Iyrin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy

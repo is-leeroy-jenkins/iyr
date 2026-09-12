@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                rates.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="rates.py" company="Terry D. Eppler">
 
-	     ayin is a python framework encapsulating the Google Maps functionality.
+	     Iyrin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -132,7 +132,7 @@ class RateLimiter:
 			self.last = time.time( )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'RateLimiter'
 			exception.method = 'wait( self )'
 			raise exception

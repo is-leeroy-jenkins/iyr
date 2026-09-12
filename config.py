@@ -134,14 +134,134 @@ MISTRAL_MODELS = [ 'mistral-large-latest', 'mistral-medium-latest',
 # -------------- SETTINGS
 
 MODES = [ 'Geocoding', 'Interactive Map',  'Distances', 'Static Maps', 'Time Zones', 'Site Crawler',
-          'Weather', 'Environmental', 'Geological', 'Astronomical', 'Celestial Map', 'Generative AI',
-          'Data Upload', 'Data Management' ]
+          'Loading', 'Weather', 'Environmental', 'Geological', 'Astronomical', 'Celestial Map',
+          'Generative AI', 'Data Upload', 'Data Management' ]
 
 
 AGENTS = ( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
 		'AppleWebKit/537.36 (KHTML, like Gecko) '
 		'Chrome/147.0.0.0 Safari/537.36' )
 
+# -------- LOADER DEFINITIONS -------------------
+
+TEXT_LOADER = r'''Provides LangChain's TextLoader functionality to parse plain-text files
+		into Document objects.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/text/TextLoader
+'''
+
+NLTK_LOADER = r'''The Natural Language Toolkit (NLTK) is a comprehensive, open-source Python library
+		used for symbolic and statistical Natural Language Processing (NLP). Developed originally at
+		the University of Pennsylvania by Steven Bird and Edward Loper, it has become a standard tool
+		in academia for teaching and research in computational linguistics.
+
+		https://www.nltk.org/
+'''
+
+HTML_LOADER = r'''Provides Langchain's UnstructuredHTMLLoader's functionality to parse HTML files
+		into Document objects. You can run the loader in one of two modes: "single" and "elements".
+		If you use "single" mode, the document will be returned as a single langchain Document object.
+		If you use "elements" mode, the unstructured library will split the document into elements
+		such as Title and NarrativeText. You can pass in additional unstructured kwargs after mode
+		to apply different unstructured settings.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/html/UnstructuredHTMLLoader
+'''
+
+WEB_CRAWLER = r'''Web fetching with optional Playwright-backed page rendering.
+'''
+
+WEB_LOADER = r'''Functionality to load all text from HTML webpages into
+		a document format that can be used downstream.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/web_base/WebBaseLoader
+'''
+
+GITHUB_LOADER = r'''The LangChain GitHub Loader is a suite of integrations designed to ingest data
+		from GitHub repositories into a format compatible with Large Language Models (LLMs).
+		These loaders are primarily used in Retrieval-Augmented Generation (RAG) pipelines to
+		allow AI agents to "chat" with codebases, analyze issues, or summarize pull requests.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/github/GithubFileLoader
+'''
+
+WIKIPEDIA_LOADER = r'''The LangChain Wikipedia Loader (WikipediaLoader) is a component designed to
+        fetch and convert Wikipedia pages into a standardized Document format for use in LLM applications.
+
+        https://reference.langchain.com/python/langchain-community/document_loaders/wikipedia/WikipediaLoader
+'''
+
+ARXIV_LOADER = r'''arXiv is a free distribution service and an open-access archive for nearly 2.4 million
+		scholarly articles in the fields of physics, mathematics, computer science, quantitative
+		biology, quantitative finance, statistics, electrical engineering and systems science, and
+		economics. Materials on this site are not peer-reviewed by arXiv.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/arxiv/ArxivLoader
+'''
+
+PDF_LOADER = r'''Public, SDK-oriented PDF loader with: Page-aware metadata, Two-stage chunking,
+		Configurable chunk profiles, Table isolation, Optional OCR fallback.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/pdf/PyPDFLoader
+'''
+
+EXCEL_LOADER = r'''Provides LangChain's UnstructuredExcelLoader functionality
+		to parse Excel spreadsheets into documents.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/excel/UnstructuredExcelLoader
+'''
+
+POWERPOINT_LOADER = r'''The UnstructuredPowerPointLoader (within LangChain) is a tool for parsing
+		Microsoft PowerPoint (.ppt/.pptx) files to extract text and metadata, enabling AI applications
+		to read and process presentations. It supports loading documents in "single" (full text) or
+		"elements" (chunked by title/narrative) modes, ideal for Retrieval Augmented Generation (RAG) tasks
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/powerpoint/UnstructuredPowerPointLoader
+'''
+
+JSON_LOADER = r'''The LangChain JSONLoader is a specialized document loader used to transform JSON
+		and JSON Lines data into standardized LangChain Document objects. It is a critical component
+		for building applications like Retrieval-Augmented Generation (RAG) that need to process structured data.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/json_loader/JSONLoader
+'''
+
+MARKDOWN_LOADER = r'''LangChain's Markdown document loaders are specialized tools used to convert
+		Markdown files into standardized LangChain Document objects. These objects are then used
+		for downstream tasks like Retrieval Augmented Generation (RAG), embedding generation,
+		or semantic chunking.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/markdown/UnstructuredMarkdownLoader
+'''
+
+XML_LOADER = r'''The UnstructuredXMLLoader in LangChain is a specialized tool designed to load and
+		parse XML files into standardized LangChain Document objects. It leverages the Unstructured.io
+		library to extract text content and preserve document structure for use in downstream LLM
+		applications like RAG.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/xml/UnstructuredXMLLoader
+'''
+
+CSV_LOADER = r'''The LangChain CSVLoader is a standard utility within the langchain-community package
+		designed to transform structured CSV data into a list of standardized Document objects.
+		This process is the foundational step for integrating tabular data into LLM-powered workflows,
+		such as Retrieval Augmented Generation (RAG).
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/csv_loader/CSVLoader
+'''
+
+WORD_LOADER = '''Works with both .docx and .doc files. You can run the loader in one of two modes:
+		"single" and "elements". If you use "single" mode, the document will be returned as a
+		single langchain Document object. If you use "elements" mode, the unstructured library will
+		split the document into elements such as Title and NarrativeText.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/word_document/UnstructuredWordDocumentLoader
+'''
+
+NOTEBOOK_LOADER = '''Loads .ipynb notebook files.
+
+		https://reference.langchain.com/python/langchain-community/document_loaders/notebook/NotebookLoader
+'''
 
 # --------------- API
 AIR_NOW = r'''AirNow is the official U.S. government website and app providing real-time,

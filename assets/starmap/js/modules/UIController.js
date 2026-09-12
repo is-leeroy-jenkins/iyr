@@ -94,9 +94,9 @@
             if (errEl) errEl.textContent = message;
         }
 
-        setAnimationState(playing) {
-            document.getElementById('playAnimationBtn').disabled = playing;
-            document.getElementById('pauseAnimationBtn').disabled = !playing;
+        setAnimationState(plIyring) {
+            document.getElementById('playAnimationBtn').disabled = plIyring;
+            document.getElementById('pauseAnimationBtn').disabled = !plIyring;
         }
 
         getTimeStep() {

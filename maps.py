@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                maps.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file="maps.py" company="Terry D. Eppler">
 
-	     ayin is a python framework encapsulating the Google Maps functionality.
+	     Iyrin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
      Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -224,7 +224,7 @@ class Maps( ):
 					backoff = min( backoff * 2, self.max )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Maps'
 			exception.method = 'request( self, endpoint: str, params: Dict[ str, str ] )'
 			raise exception

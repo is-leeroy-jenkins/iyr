@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                Iyrin
       Filename:                geocode.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -10,7 +10,7 @@
   ******************************************************************************************
   <copyright file='geocode.py' company='Terry D. Eppler'>
 
-	     ayin is a python framework encapsulating the Google Maps functionality.
+	     Iyrin is a python framework encapsulating the Google Maps functionality.
 	     Copyright ©  2022  Terry Eppler
 
 	     Purpose:
@@ -190,7 +190,7 @@ class Geocoder( ):
 			return f'{prefix}::{joined}'
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'key_for( self, *kwargs )'
 			raise exception
@@ -224,7 +224,7 @@ class Geocoder( ):
 			return lat, lng
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'validate_coordinates( self, latitude: float, longitude: float )'
 			raise exception
@@ -274,7 +274,7 @@ class Geocoder( ):
 			return self.output
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'freeform( self, address: str, country: str=US )'
 			raise exception
@@ -321,7 +321,7 @@ class Geocoder( ):
 			return self.output
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'reverse( self, latitude: float, longitude: float )'
 			raise exception
@@ -363,7 +363,7 @@ class Geocoder( ):
 			return self.freeform( self.query, hint )
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'city_state_country( self, city: str, state: str, country: str )'
 			raise exception
@@ -439,7 +439,7 @@ class Geocoder( ):
 			return results
 		except Exception as e:
 			exception = Error( e )
-			exception.module = 'ayin'
+			exception.module = 'Iyrin'
 			exception.cause = 'Geocoder'
 			exception.method = 'batch_freeform( self, *kwargs )'
 			raise exception

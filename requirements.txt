@@ -35,7 +35,9 @@ langchain-mistralai
 langchain-huggingface
 langchain-chroma
 langchain-pinecone
+langchain-google-community
 sentence-transformers
+doc2txt
 chromadb
 pinecone
 llama-cpp-python
