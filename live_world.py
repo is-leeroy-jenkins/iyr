@@ -413,6 +413,7 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_firms_result' ] = { }
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
+	st.session_state[ 'live_world_annotations' ] = [ ]
 	st.session_state[ 'live_world_last_refresh' ] = ''
 	st.session_state[ 'live_world_last_error' ] = ''
 	st.session_state[ 'live_world_refresh_requested' ] = False
