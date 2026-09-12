@@ -3081,6 +3081,24 @@ def rename_table( old_name: str, new_name: str ) -> None:
 		
 		conn.commit( )
 
+# ------------- GEN AI
+
+def _model_selector( key_prefix: str, label: str, options: list[ str ], default_model: str ) -> str:
+	base_options = options[ : ]
+	if "Custom..." not in base_options:
+		base_options.append( "Custom..." )
+	
+	idx_default = base_options.index( default_model ) if default_model in base_options else 0
+	
+	selected = st.selectbox( label=label, options=base_options, index=idx_default,
+		key=f"{key_prefix}_model_select", )
+	
+	if selected == "Custom...":
+		return st.text_input( "Custom Model", value=default_model,
+			key=f"{key_prefix}_model_custom", )
+	
+	return selected
+
 # ------------- DATASET UTILITIES
 
 def has_loaded_dataset( df_frame: object ) -> bool:
@@ -6423,7 +6441,7 @@ elif mode == 'Geological':
 # ==============================================================================
 # TEXT GENERATION MODE
 # ==============================================================================
-elif mode == 'Generation':
+elif mode == 'Generative AI':
 	st.subheader( '🧠  Generative AI' )
 	st.divider( )
 	

@@ -64,29 +64,76 @@ STYLE_NAME = r'uap-dark'
 
 # ----------- API KEYS
 
+AIRNOW_API_KEY = os.getenv( 'AIRNOW_API_KEY' )
+CLAUDE_API_KEY = os.getenv( 'CLAUDE_API_KEY' )
+CONGRESS_API_KEY = os.getenv( 'CONGRESS_API_KEY' )
+CHROMA_API_KEY = os.getenv( 'CHROMA_API_KEY' )
+CHROMA_TENET_ID = os.getenv( 'CHROMA_TENET_ID' )
+GEOAPIFY_API_KEY = os.getenv( 'GEOAPIFY_API_KEY' )
 GEOCODING_API_KEY = os.getenv( 'GEOCODING_API_KEY' )
+GEMINI_API_KEY = os.getenv( 'GEMINI_API_KEY' )
 GOOGLE_API_KEY = os.getenv( 'GOOGLE_API_KEY' )
 GOOGLE_CSE_ID = os.getenv( 'GOOGLE_CSE_ID' )
-GOOGLE_CLOUD_LOCATION = os.getenv( 'GOOGLE_CLOUD_LOCATION' )
 GOOGLE_CLOUD_PROJECT_ID = os.getenv( 'GOOGLE_CLOUD_PROJECT_ID' )
-GOOGLEMAPS_API_KEY = os.getenv( 'GOOGLEMAPS_API_KEY' )
+GOOGLE_CLOUD_LOCATION = os.getenv( 'GOOGLE_CLOUD_LOCATION' )
+GOVINFO_API_KEY = os.getenv( 'GOVINFO_API_KEY' )
+GOOGLE_GENAI_USE_VERTEXAI = os.getenv( 'GOOGLE_GENAI_USE_VERTEXAI' )
 GOOGLE_WEATHER_API_KEY = os.getenv( 'GOOGLE_WEATHER_API_KEY' )
+GOOGLE_ACCOUNT_FILE = os.getenv( 'GOOGLE_ACCOUNT_CREDENTIALS' )
+GOOGLE_DRIVE_TOKEN_PATH = os.getenv( 'GOOGLE_DRIVE_TOKEN_PATH' )
+GOOGLE_DRIVE_FOLDER_ID = os.getenv( 'GOOGLE_DRIVE_FOLDER_ID' )
+HUGGINGFACE_API_KEY = os.getenv( 'HUGGINGFACE_API_KEY' )
+IPINFO_API_KEY = os.getenv( 'IPINFO_API_KEY' )
+OPENAI_API_KEY = os.getenv( 'OPENAI_API_KEY' )
+PINECONE_API_KEY = os.getenv( 'PINECONE_API_KEY' )
+LANGSMITH_API_KEY = os.getenv( 'LANGSMITH_API_KEY' )
+LLAMAINDEX_API_KEY = os.getenv( 'LLAMAINDEX_API_KEY' )
+LLAMACLOUD_API_KEY = os.getenv( 'LLAMACLOUD_API_KEY' )
+MISTRAL_API_KEY = os.getenv( 'MISTRAL_API_KEY' )
 NASA_API_KEY = os.getenv( 'NASA_API_KEY' )
 NASA_EARTHDATA_TOKEN = os.getenv( 'NASA_EARTHDATA_TOKEN' )
-AIRNOW_API_KEY = os.getenv( 'AIRNOW_API_KEY' )
-OPENAQ_API_KEY = os.getenv( 'OPENAQ_API_KEY' )
+NEWS_API_KEY = os.getenv( 'NEWSAPI_API_KEY' )
+THENEWS_API_KEY = os.getenv( 'THENEWSAPI_API_KEY' )
 WEATHERAPI_API_KEY = os.getenv( 'WEATHERAPI_API_KEY' )
+XAI_API_KEY = os.getenv( 'XAI_API_KEY' )
+O365_CLIENT_ID = os.getenv( 'O365_CLIENT_ID' )
+O365_CLIENT_SECRET = os.getenv( 'O365_CLIENT_SECRET' )
+OPENAQ_API_KEY = os.getenv( 'OPENAQ_API_KEY' )
 OPENSKY_API_CLIENT_ID = os.getenv( 'OPENSKY_API_CLIENT_ID' )
 OPENSKY_API_CREDENTIALS = os.getenv( 'OPENSKY_API_CREDENTIALS' )
+OPENSKY_API_CLIENT_SECRET = os.getenv( 'OPENSKY_API_CLIENT_SECRET' )
+CENSUS_API_KEY = os.getenv( 'CENSUS_API_KEY' )
+SOCRATA_API_KEY = os.getenv( 'SOCRATA_API_KEY' )
+HEALTHDATA_API_KEY = os.getenv( 'HEALTHDATA_API_KEY' )
+USGS_WATERDATA_API_KEY = os.getenv( 'USGS_WATERDATA_API_KEY' ) or os.getenv( 'USGS_API_KEY' )
+DATA_GOV_API_KEY = os.getenv( 'DATAGOV_API_KEY' )
 GOVINFO_API_KEY = os.getenv( 'GOVINFO_API_KEY' )
 FIRMS_MAP_KEY = os.getenv( 'FIRMS_MAP_KEY' )
 PURPLEAIR_API_KEY = os.getenv( 'PURPLEAIR_API_KEY' )
+SKYMAP_TOKEN = os.getenv( 'SKY_MAP_TOKEN' )
 
+
+# ----------------- Models
+
+GPT_MODELS = [ 'gpt-5.4', 'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+               'gpt-5.1', 'gpt-5.2', 'gpt-4.1' ]
+
+GEMINI_MODELS = [ 'gemini-2.5-flash', 'gemini-2.5-flash-lite',
+                  'gemini-2.5-flash-lite' ]
+
+GROK_MODELS = [ 'grok-4-1-fast-reasoning', 'grok-4-fast-reasoning', 'grok-4',
+                'grok-code-fast-1', 'grok-3-mini', 'grok-2-image-1212' ]
+
+CLAUDE_MODELS = [ 'claude-opus-4-6', 'claude-sonnet-4-6',
+                  'claude-haiku-4-5' ]
+
+MISTRAL_MODELS = [ 'mistral-large-latest', 'mistral-medium-latest',
+                   'mistral-small-latest', 'mistral-ocr-latest'  ]
 
 # -------------- SETTINGS
 
 MODES = [ 'Geocoding', 'Interactive Map',  'Distances', 'Static Maps', 'Time Zones', 'Site Crawler',
-          'Weather', 'Environmental', 'Geological', 'Astronomical', 'Celestial Map',
+          'Weather', 'Environmental', 'Geological', 'Astronomical', 'Celestial Map', 'Generative AI',
           'Data Upload', 'Data Management' ]
 
 

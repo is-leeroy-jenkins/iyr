@@ -40,33 +40,19 @@ from sources import (
 	AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive, OverpassCameras, OverpassInfrastructure,
 	OverpassMapLayers )
 
+LIVE_WORLD_LAYERS: Dict[ str, str ] = { 'aircraft': '✈️ Aircraft (Live)',
+		'military_aircraft': '🛩️ Military Aircraft', 'satellites': '🛰️ Satellites',
+		'vessels': '🚢 Vessels & Ships', 'earthquakes': '📈 Earthquakes',
+		'fires': '🔥 Fires (Wildfires)', 'tracking': '🎯 Tracking & Trails',
+		'measurements': '📏 Measurements & Annotations', 'infrastructure': '📡 Infrastructure ',
+		'cameras': '📷 CCTV / Web Cameras', 'map_layers': '🗺️ Additional Map Layers', }
 
-LIVE_WORLD_LAYERS: Dict[ str, str ] = {
-	'aircraft': '✈️ Aircraft (Live)',
-	'military_aircraft': '🛩️ Military Aircraft',
-	'satellites': '🛰️ Satellites',
-	'vessels': '🚢 Vessels & Ships',
-	'earthquakes': '📈 Earthquakes',
-	'fires': '🔥 Fires (Wildfires)',
-	'tracking': '🎯 Tracking & Trails',
-	'measurements': '📏 Measurements & Annotations',
-	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
-	'cameras': '📷 CCTV / Web Cameras',
-	'map_layers': '🗺️ Additional Map Layers',
-}
+LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = { }
 
-LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
-}
+AI_ADVANCED_TOOLS: Dict[ str, str ] = { 'cross_layer_analysis': '🧭 Cross-Layer Analysis',
+		'geofencing': '🛡️ Geofencing', 'historical_replay': '🕓 Historical Replay', }
 
-AI_ADVANCED_TOOLS: Dict[ str, str ] = {
-	'cross_layer_analysis': '🧭 Cross-Layer Analysis',
-	'geofencing': '🛡️ Geofencing',
-	'historical_replay': '🕓 Historical Replay',
-}
-
-AI_ADVANCED_PENDING_TOOLS: Dict[ str, str ] = {
-	'agent_tools': '🤖 Agent Tools',
-}
+AI_ADVANCED_PENDING_TOOLS: Dict[ str, str ] = { 'agent_tools': '🤖 Agent Tools', }
 
 
 @dataclass
@@ -293,8 +279,8 @@ def render_live_world_sidebar( ) -> None:
 	'''
 	initialize_live_world_state( )
 
-	with st.expander( '🌐 Live World Data (God\'s Eye View)', expanded=False ):
-		st.checkbox( 'Enable Live World Map', key='live_world_enabled' )
+	with st.expander( '🌐 Mapping', expanded=False ):
+		st.checkbox( 'Enable Live Map', key='live_world_enabled' )
 		st.divider( )
 		st.caption( 'Live Layers' )
 
