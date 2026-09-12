@@ -33,6 +33,9 @@ import pydeck as pdk
 import streamlit as st
 
 from fetchers import Firms, USGSEarthquakes
+from live_world_history import (
+	clear_live_world_history, get_live_world_history_snapshots, get_live_world_history_summary,
+	load_live_world_history, persist_live_world_history, purge_live_world_history )
 from live_world_sources import AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive
 
 
@@ -56,11 +59,11 @@ LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
 AI_ADVANCED_TOOLS: Dict[ str, str ] = {
 	'cross_layer_analysis': '🧭 Cross-Layer Analysis',
 	'geofencing': '🛡️ Geofencing',
+	'historical_replay': '🕓 Historical Replay',
 }
 
 AI_ADVANCED_PENDING_TOOLS: Dict[ str, str ] = {
 	'agent_tools': '🤖 Agent Tools',
-	'historical_replay': '🕓 Historical Replay',
 }
 
 
@@ -194,6 +197,16 @@ def initialize_live_world_state( ) -> None:
 		'live_world_geofence_snapshot': { },
 		'live_world_geofence_initialized': False,
 		'live_world_geofence_last_refresh_processed': '',
+		'live_world_historical_replay': False,
+		'live_world_history_persist': True,
+		'live_world_history_retention_days': 30,
+		'live_world_history_window': '24 Hours',
+		'live_world_history_entity_types': [
+			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
+		'live_world_history_limit': 5000,
+		'live_world_history_snapshot': '',
+		'live_world_history_last_saved': 0,
+		'live_world_history_last_error': '',
 		'live_world_refresh_requested': False,
 		'live_world_last_refresh': '',
 		'live_world_last_error': '',
@@ -459,6 +472,46 @@ def render_live_world_sidebar( ) -> None:
 				if st.button( 'Clear Geofence Events', icon='🧹',
 						key='live_world_geofence_clear_events', width='stretch' ):
 					clear_live_world_geofence_events( )
+
+			st.checkbox( AI_ADVANCED_TOOLS[ 'historical_replay' ],
+				key='live_world_historical_replay' )
+			if st.session_state[ 'live_world_historical_replay' ]:
+				st.checkbox( 'Persist Live World Refreshes', key='live_world_history_persist' )
+				history_c1, history_c2 = st.columns( 2 )
+				with history_c1:
+					st.selectbox( 'Replay Window',
+						options=[ '1 Hour', '6 Hours', '24 Hours', '7 Days', '30 Days', 'All Retained' ],
+						key='live_world_history_window' )
+				with history_c2:
+					st.slider( 'Retention (Days)', min_value=1, max_value=365, step=1,
+						key='live_world_history_retention_days' )
+				st.multiselect( 'Replay Entity Types',
+					options=[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel',
+						'Earthquake', 'Fire' ], key='live_world_history_entity_types' )
+				st.slider( 'Replay Record Limit', min_value=100, max_value=25000, step=100,
+					key='live_world_history_limit' )
+				history_hours = get_live_world_history_window_hours(
+					str( st.session_state[ 'live_world_history_window' ] ) )
+				snapshot_options = get_live_world_history_snapshots( history_hours )
+				if snapshot_options:
+					if st.session_state[ 'live_world_history_snapshot' ] not in snapshot_options:
+						st.session_state[ 'live_world_history_snapshot' ] = snapshot_options[ 0 ]
+					st.selectbox( 'Replay Snapshot', options=snapshot_options,
+						key='live_world_history_snapshot' )
+				else:
+					st.session_state[ 'live_world_history_snapshot' ] = ''
+					st.caption( 'No persisted Live World snapshots are available in this window.' )
+				history_b1, history_b2 = st.columns( 2 )
+				with history_b1:
+					if st.button( 'Purge Expired', icon='🧹', key='live_world_history_purge',
+							width='stretch' ):
+						purge_live_world_history(
+							int( st.session_state[ 'live_world_history_retention_days' ] ) )
+				with history_b2:
+					if st.button( 'Clear History', icon='🗑️', key='live_world_history_clear',
+							width='stretch' ):
+						clear_live_world_history( )
+						st.session_state[ 'live_world_history_snapshot' ] = ''
 			for label in AI_ADVANCED_PENDING_TOOLS.values( ):
 				st.checkbox( label, value=False, disabled=True )
 
@@ -1742,6 +1795,62 @@ def get_live_world_geofence_event_frame( ) -> pd.DataFrame:
 	return pd.DataFrame( st.session_state.get( 'live_world_geofence_events', [ ] ) or [ ],
 		columns=columns )
 
+
+def get_live_world_history_window_hours( window: str ) -> int:
+	'''
+
+		Purpose:
+		--------
+		Translate the Historical Replay window label into a lookback duration in hours.
+
+		Parameters:
+		-----------
+		window (str): Historical Replay window label.
+
+		Returns:
+		--------
+		int: Lookback duration in hours; zero means all retained history.
+
+	'''
+	throw_if( 'window', window )
+	windows: Dict[ str, int ] = {
+		'1 Hour': 1,
+		'6 Hours': 6,
+		'24 Hours': 24,
+		'7 Days': 168,
+		'30 Days': 720,
+		'All Retained': 0,
+	}
+	if window not in windows:
+		raise ValueError( f'Unsupported Historical Replay window: {window}' )
+	return windows[ window ]
+
+
+def load_live_world_replay_frame( ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Load Historical Replay observations using the current sidebar configuration.
+
+		Returns:
+		--------
+		pd.DataFrame: Persisted observations through the selected replay snapshot.
+
+	'''
+	initialize_live_world_state( )
+	snapshot = str( st.session_state.get( 'live_world_history_snapshot', '' ) or '' )
+	if not snapshot:
+		return pd.DataFrame( )
+	entity_types = list( st.session_state.get( 'live_world_history_entity_types', [ ] ) or [ ] )
+	if not entity_types:
+		return pd.DataFrame( )
+	hours = get_live_world_history_window_hours(
+		str( st.session_state[ 'live_world_history_window' ] ) )
+	return load_live_world_history( hours, entity_types, snapshot,
+		int( st.session_state[ 'live_world_history_limit' ] ) )
+
+
 def clear_live_world_tracking( ) -> None:
 	'''
 
@@ -1918,8 +2027,19 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 			ignore_index=True ) if frames else entities_to_dataframe( [ ] )
 		st.session_state[ 'live_world_df_entities' ] = df_entities
 		update_live_world_tracking( df_entities )
+		observed_at = dt.datetime.now( dt.timezone.utc ).isoformat( )
 		st.session_state[ 'live_world_last_refresh' ] = dt.datetime.now( ).strftime(
 			'%Y-%m-%d %H:%M:%S' )
+		if st.session_state[ 'live_world_history_persist' ]:
+			try:
+				st.session_state[ 'live_world_history_last_saved' ] = persist_live_world_history(
+					df_entities, observed_at, observed_at )
+				purge_live_world_history(
+					int( st.session_state[ 'live_world_history_retention_days' ] ) )
+				st.session_state[ 'live_world_history_last_error' ] = ''
+			except Exception as history_ex:
+				st.session_state[ 'live_world_history_last_saved' ] = 0
+				st.session_state[ 'live_world_history_last_error' ] = str( history_ex )
 		st.session_state[ 'live_world_refresh_requested' ] = False
 		return df_entities
 
@@ -1979,7 +2099,8 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 	df_map[ 'Latitude' ] = pd.to_numeric( df_map[ 'Latitude' ], errors='coerce' )
 	df_map[ 'Longitude' ] = pd.to_numeric( df_map[ 'Longitude' ], errors='coerce' )
 	df_map = df_map.dropna( subset=[ 'Latitude', 'Longitude' ] )
-	if df_map.empty and not st.session_state[ 'live_world_measurements' ]:
+	if (df_map.empty and not st.session_state[ 'live_world_measurements' ]
+			and not st.session_state[ 'live_world_historical_replay' ]):
 		st.info( 'Live World data does not contain usable map coordinates.' )
 		return
 
@@ -2250,14 +2371,46 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			'fontSize': '12px',
 		},
 	}
+	df_history = pd.DataFrame( )
+	df_history_latest = pd.DataFrame( )
+	if st.session_state[ 'live_world_historical_replay' ]:
+		try:
+			df_history = load_live_world_replay_frame( )
+			if not df_history.empty:
+				df_history_latest = df_history.sort_values( by='ObservedAt', kind='stable' ).groupby(
+					[ 'EntityType', 'EntityId' ], as_index=False ).last( )
+				df_replay_points = df_history_latest.copy( )
+				df_replay_points[ 'Radius' ] = 7000.0 * float(
+					st.session_state[ 'live_world_point_scale' ] )
+				layers.append( pdk.Layer( 'ScatterplotLayer', data=df_replay_points,
+					get_position='[Longitude, Latitude]', get_radius='Radius',
+					get_fill_color=[ 180, 120, 255, 180 ], get_line_color=[ 240, 220, 255, 255 ],
+					line_width_min_pixels=1, stroked=True, pickable=True ) )
+				moving_types = [ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel' ]
+				path_rows: List[ Dict[ str, object ] ] = [ ]
+				for (entity_type, entity_id), group in df_history[
+					df_history[ 'EntityType' ].isin( moving_types ) ].groupby(
+						[ 'EntityType', 'EntityId' ], sort=False ):
+					group = group.sort_values( by='ObservedAt', kind='stable' )
+					path_points = group[ [ 'Longitude', 'Latitude' ] ].values.tolist( )
+					if len( path_points ) > 1:
+						path_rows.append( { 'EntityType': entity_type, 'EntityId': entity_id,
+							'Path': path_points } )
+				if path_rows:
+					layers.append( pdk.Layer( 'PathLayer', data=pd.DataFrame( path_rows ),
+						get_path='Path', get_color=[ 180, 120, 255, 210 ],
+						get_width=3, width_min_pixels=2, pickable=True ) )
+		except Exception as history_ex:
+			st.session_state[ 'live_world_history_last_error' ] = str( history_ex )
+
 	deck = pdk.Deck( layers=layers, initial_view_state=view_state,
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab = st.tabs(
+	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab, history_tab = st.tabs(
 		[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
 			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking', '📏 Measurements', '🧭 Analysis',
-			'🛡️ Geofence' ] )
+			'🛡️ Geofence', '🕓 Historical Replay' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -2463,3 +2616,30 @@ def make_live_world_display_frame( df_frame: pd.DataFrame ) -> pd.DataFrame:
 		if column in df_display.columns:
 			df_display = df_display.drop( columns=[ column ] )
 	return df_display
+
+	with history_tab:
+		if not st.session_state[ 'live_world_historical_replay' ]:
+			st.info( 'Enable Historical Replay in AI & Advanced Tools.' )
+		else:
+			history_summary = get_live_world_history_summary( )
+			history_c1, history_c2, history_c3, history_c4 = st.columns( 4, border=True )
+			history_c1.metric( 'Observations', f'{int( history_summary[ "ObservationCount" ] ):,}' )
+			history_c2.metric( 'Snapshots', f'{int( history_summary[ "SnapshotCount" ] ):,}' )
+			history_c3.metric( 'Replay Records', f'{len( df_history ):,}' )
+			history_c4.metric( 'Replay Entities', f'{len( df_history_latest ):,}' )
+			if st.session_state[ 'live_world_history_last_error' ]:
+				st.error( f'Historical Replay failed: {st.session_state[ "live_world_history_last_error" ]}' )
+			st.caption( f'Replay snapshot: {st.session_state.get( "live_world_history_snapshot", "" ) or "None"}' )
+			st.caption( f'Last refresh inserted {int( st.session_state.get( "live_world_history_last_saved", 0 ) ):,} historical observations.' )
+			if df_history.empty:
+				st.info( 'No persisted observations match the selected replay window and entity types.' )
+			else:
+				st.markdown( '**Replay Positions**' )
+				st.data_editor( make_live_world_display_frame( df_history_latest ),
+					key='live_world_history_latest_table', use_container_width=True,
+					disabled=True, hide_index=True )
+				st.markdown( '**Historical Observations**' )
+				st.data_editor( make_live_world_display_frame( df_history ),
+					key='live_world_history_table', use_container_width=True,
+					disabled=True, hide_index=True )
+
