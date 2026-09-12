@@ -1,13 +1,13 @@
 '''
 ******************************************************************************************
- Assembly:                ayin
+ Assembly:                iyr
  Filename:                app.py
  Author:                  Terry D. Eppler (framework) / Assistant (Streamlit UI)
  Created:                 12-27-2025
 ******************************************************************************************
 
 Purpose:
-    Streamlit application exposing ayin geospatial functionality:
+    Streamlit application exposing iyr geospatial functionality:
         - Geocoding
         - Places Text Search fallback
         - Distance Matrix
@@ -54,41 +54,17 @@ from timezones import Timezone
 from staticmaps import StaticMap
 from excel import Excel
 from caches import InMemoryCache, SQLiteCache
-from document_processing import (
-	render_web_document_processing,
-	render_source_processing_controls,
-	render_mode_document_tabs )
-from fetchers import (
-	GoogleWeather,
-	OpenWeather,
-	HistoricalWeather,
-	ClimateData,
-	TidesAndCurrents,
-	AirNow,
-	UvIndex,
-	OpenAQ,
-	PurpleAir,
-	EnviroFacts,
-	Firms,
-	EoNet,
-	USGSEarthquakes,
-	USGSWaterData,
-	USGSTheNationalMap,
-	GlobalImagery,
-	NavalObservatory,
-	SatelliteCenter,
-	SpaceWeather,
-	AstroCatalog,
-	AstroQuery,
-	StarMap,
-	StarChart,
-	WebFetcher )
+from processing import (render_web_document_processing, render_source_processing_controls,
+                        render_mode_document_tabs)
+from fetchers import (GoogleWeather, OpenWeather, HistoricalWeather, ClimateData, TidesAndCurrents,
+                      AirNow, UvIndex, OpenAQ, PurpleAir, EnviroFacts, Firms, EoNet,
+                      USGSEarthquakes, USGSWaterData, USGSTheNationalMap, GlobalImagery,
+                      NavalObservatory, SatelliteCenter, SpaceWeather, AstroCatalog, AstroQuery,
+                      StarMap, StarChart, WebFetcher)
 
 # ---------------------------------------------------------------------
 # SESSION STATE INITIALIZATION
 # ---------------------------------------------------------------------
-
-# ------- Data State
 
 if 'source' not in st.session_state:
 	st.session_state[ 'source' ] = ''
@@ -495,7 +471,7 @@ def render_celestial_map( asset_root: str = 'assets/starmap', height: int = 1400
 		self-contained HTML component. The function preserves the existing HTML, CSS,
 		JavaScript, D3, Leaflet, Pickr, star-map rendering, location picker, star detail
 		panel, animation controls, and image-export behavior while loading local JSON data
-		from the configured asset folder and passing ayin's observer location into the
+		from the configured asset folder and passing iyr's observer location into the
 		embedded JavaScript application.
 
 		Parameters:
@@ -503,9 +479,9 @@ def render_celestial_map( asset_root: str = 'assets/starmap', height: int = 1400
 		asset_root (str): Root folder containing index.html, style.css, js/main.js,
 			js/modules/*.js, and data/*.json.
 		height (int): Component iframe height in pixels.
-		latitude (Optional[float]): Observer latitude supplied by ayin Location State or
+		latitude (Optional[float]): Observer latitude supplied by iyr Location State or
 			manual Celestial Map controls.
-		longitude (Optional[float]): Observer longitude supplied by ayin Location State or
+		longitude (Optional[float]): Observer longitude supplied by iyr Location State or
 			manual Celestial Map controls.
 		location (Optional[str]): Human-readable observer location label.
 		zoom (Optional[int]): Initial Leaflet location-picker zoom level.
@@ -3176,7 +3152,7 @@ def store_loaded_dataset( df_dataset: pd.DataFrame, df_original: pd.DataFrame | 
 # ---------------------------------------------------------------------
 # PAGE CONFIGURATION
 # ---------------------------------------------------------------------
-st.set_page_config(  page_title='ayin', layout='wide', page_icon=cfg.FAVICON,
+st.set_page_config(  page_title='iyr', layout='wide', page_icon=cfg.FAVICON,
     initial_sidebar_state='expanded', )
 
 style_subheaders( )
@@ -3189,7 +3165,7 @@ st.logo( cfg.LOGO, size='Large' )
 with st.sidebar:
 	# ------- Map Mode
 	set_blue_divider( )
-	st.markdown( '#### 🛰️ GIS Mapping' )
+	st.markdown( '#### 🛰️ GIS Data' )
 	with st.expander( 'Mode', expanded=True ):
 		mode = st.radio( label='Mode', options=cfg.MODES, label_visibility='collapsed' )
 		if mode:
@@ -3742,17 +3718,13 @@ elif mode == 'Static Maps':
 						st.session_state[ 'zoom' ] = int( zoom )
 						st.session_state[ 'map_size' ] = str( size )
 					
-					url = static_maps.pin(
-						lat=float( lat ),
-						lng=float( lng ),
-						zoom=int( zoom ),
+					url = static_maps.pin( lat=float( lat ), lng=float( lng ), zoom=int( zoom ),
 						size=str( size ) )
 					
 					st.session_state[ 'maps_last_url' ] = url
 					st.session_state[ 'maps_last_latitude' ] = float( lat )
 					st.session_state[ 'maps_last_longitude' ] = float( lng )
 					st.success( 'Static map generated.' )
-				
 				except Exception as ex:
 					st.error( f'Static map generation failed: {ex}' )
 		
@@ -3795,45 +3767,27 @@ elif mode == 'Time Zones':
 				
 				coord_c1, coord_c2 = st.columns( 2 )
 				with coord_c1:
-					st.number_input(
-						'Latitude',
-						value=lat_tz,
-						format='%.6f',
-						key='timezone_global_latitude_display',
-						disabled=True )
+					st.number_input( 'Latitude', value=lat_tz, format='%.6f',
+						key='timezone_global_latitude_display', disabled=True )
 				
 				with coord_c2:
-					st.number_input(
-						'Longitude',
-						value=lng_tz,
-						format='%.6f',
-						key='timezone_global_longitude_display',
-						disabled=True )
+					st.number_input( 'Longitude', value=lng_tz, format='%.6f',
+						key='timezone_global_longitude_display', disabled=True )
 			
 			else:
 				manual_default_lat = (
-						float( location_state[ 'latitude' ] )
-						if has_global_coords
-						else 0.0 )
+						float( location_state[ 'latitude' ] ) if has_global_coords else 0.0)
 				
 				manual_default_lng = (
-						float( location_state[ 'longitude' ] )
-						if has_global_coords
-						else 0.0 )
+						float( location_state[ 'longitude' ] ) if has_global_coords else 0.0)
 				
 				coord_c1, coord_c2 = st.columns( 2 )
 				with coord_c1:
-					lat_tz = st.number_input(
-						'Latitude',
-						value=manual_default_lat,
-						format='%.6f',
+					lat_tz = st.number_input( 'Latitude', value=manual_default_lat, format='%.6f',
 						key='timezone_manual_latitude' )
 				
 				with coord_c2:
-					lng_tz = st.number_input(
-						'Longitude',
-						value=manual_default_lng,
-						format='%.6f',
+					lng_tz = st.number_input( 'Longitude', value=manual_default_lng, format='%.6f',
 						key='timezone_manual_longitude' )
 		
 		with tz_c2:
@@ -3872,12 +3826,10 @@ elif mode == 'Time Zones':
 			
 			lat_c, lng_c = st.columns( 2 )
 			with lat_c:
-				st.metric(
-					'Latitude',
+				st.metric( 'Latitude',
 					f'{float( st.session_state.get( "timezone_last_latitude", 0.0 ) ):.6f}' )
 			with lng_c:
-				st.metric(
-					'Longitude',
+				st.metric( 'Longitude',
 					f'{float( st.session_state.get( "timezone_last_longitude", 0.0 ) ):.6f}' )
 			
 			st.json( result )
@@ -3887,7 +3839,10 @@ elif mode == 'Time Zones':
 # ==============================================================================
 elif mode == 'Site Crawler':
 	render_web_document_processing( )
-
+	
+# ==============================================================================
+# WEATHER MODE
+# ==============================================================================
 elif mode == 'Weather':
 	left, center, right = st.columns( [ 0.025, 0.95, 0.025 ] )
 	with center:
@@ -3906,11 +3861,9 @@ elif mode == 'Weather':
 		set_blue_divider( )
 		
 		weather_c1, weather_c2 = st.columns( [ 0.40, 0.60 ], border=True, gap='xsmall' )
-		
 		with weather_c1:
-			# ------------------------------------------------------------------
-			# GOOGLE WEATHER
-			# ------------------------------------------------------------------
+			
+			# --------- GOOGLE WEATHER
 			with st.expander( '🌦️ Google Weather', expanded=True ):
 				st.badge( label='About API', color='blue', help=cfg.GOOGLE_WEATHER )
 				google_address = st.text_input( 'Address or Location', value=global_location,
@@ -3942,7 +3895,6 @@ elif mode == 'Weather':
 					value=10, step=1, key='weather_google_timeout' )
 				
 				google_btn_c1, google_btn_c2 = st.columns( 2 )
-				
 				with google_btn_c1:
 					if st.button( label='Run', icon='🏃', key='weather_google_run',
 							use_container_width=True ):
@@ -3953,33 +3905,23 @@ elif mode == 'Weather':
 								weather = GoogleWeather( )
 								
 								if google_product == 'Current Conditions':
-									result = weather.fetch_current(
-										address=google_address,
-										units_system=google_units,
-										language_code=google_language,
+									result = weather.fetch_current( address=google_address,
+										units_system=google_units, language_code=google_language,
 										time=int( google_timeout ) )
 								
 								elif google_product == 'Hourly Forecast':
-									result = weather.fetch_hourly_forecast(
-										address=google_address,
-										hours=int( google_hours ),
-										units_system=google_units,
-										language_code=google_language,
-										time=int( google_timeout ) )
+									result = weather.fetch_hourly_forecast( address=google_address,
+										hours=int( google_hours ), units_system=google_units,
+										language_code=google_language, time=int( google_timeout ) )
 								
 								elif google_product == 'Daily Forecast':
-									result = weather.fetch_daily_forecast(
-										address=google_address,
-										days=int( google_days ),
-										units_system=google_units,
-										language_code=google_language,
-										time=int( google_timeout ) )
+									result = weather.fetch_daily_forecast( address=google_address,
+										days=int( google_days ), units_system=google_units,
+										language_code=google_language, time=int( google_timeout ) )
 								
 								else:
-									result = weather.fetch_alerts(
-										address=google_address,
-										language_code=google_language,
-										time=int( google_timeout ) )
+									result = weather.fetch_alerts( address=google_address,
+										language_code=google_language, time=int( google_timeout ) )
 								
 								weather_latitude = getattr( weather, 'latitude', None )
 								weather_longitude = getattr( weather, 'longitude', None )
@@ -4009,10 +3951,10 @@ elif mode == 'Weather':
 						st.session_state[ 'weather_last_longitude' ] = None
 			
 				st.divider( )
-				render_source_processing_controls( 'weather', 'weather_last_result', 'weather_last_source', 'Google Weather', 'weather_google_weather' )
-			# ------------------------------------------------------------------
-			# OPENWEATHER / OPEN-METEO
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'weather', 'weather_last_result',
+					'weather_last_source', 'Google Weather', 'weather_google_weather' )
+		
+			# --------- OPENWEATHER / OPEN-METEO\
 			with st.expander( '🌤️ OpenWeather / Open-Meteo', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.OPEN_WEATHER )
 				open_location = st.text_input( 'Location', value=global_location,
@@ -4036,7 +3978,6 @@ elif mode == 'Weather':
 					value=10, step=1, key='weather_open_count' )
 				
 				open_btn_c1, open_btn_c2 = st.columns( 2 )
-				
 				with open_btn_c1:
 					if st.button( label='Run', icon='🏃', key='weather_open_run',
 							use_container_width=True ):
@@ -4078,35 +4019,27 @@ elif mode == 'Weather':
 						st.session_state[ 'weather_last_longitude' ] = None
 			
 				st.divider( )
-				render_source_processing_controls( 'weather', 'weather_last_result', 'weather_last_source', 'OpenWeather / Open-Meteo', 'weather_openweather_open_meteo' )
-			# ------------------------------------------------------------------
-			# HISTORICAL WEATHER
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'weather', 'weather_last_result',
+					'weather_last_source', 'OpenWeather / Open-Meteo',
+					'weather_openweather_open_meteo' )
+				
+			# --------- HISTORICAL WEATHER
 			with st.expander( '🕰️ Historical Weather', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.HISTORICAL_WEATHER )
 				historical_location = st.text_input( 'Location', value=global_location,
 					key='weather_historical_location' )
 				
-				historical_date = st.date_input(
-					'Historical Date',
+				historical_date = st.date_input( 'Historical Date',
 					value=dt.date.today( ) - dt.timedelta( days=7 ),
 					key='weather_historical_date' )
 				
-				historical_zone = st.text_input(
-					'Timezone',
-					value='auto',
+				historical_zone = st.text_input( 'Timezone', value='auto',
 					key='weather_historical_zone' )
 				
-				historical_count = st.number_input(
-					'Geocoding Result Count',
-					min_value=1,
-					max_value=100,
-					value=10,
-					step=1,
-					key='weather_historical_count' )
+				historical_count = st.number_input( 'Geocoding Result Count', min_value=1,
+					max_value=100, value=10, step=1, key='weather_historical_count' )
 				
 				historical_btn_c1, historical_btn_c2 = st.columns( 2 )
-				
 				with historical_btn_c1:
 					if st.button( label='Run', icon='🏃', key='weather_historical_run',
 							use_container_width=True ):
@@ -4116,10 +4049,8 @@ elif mode == 'Weather':
 							try:
 								weather = HistoricalWeather( )
 								
-								result = weather.fetch(
-									location=historical_location,
-									date=historical_date,
-									zone=historical_zone,
+								result = weather.fetch( location=historical_location,
+									date=historical_date, zone=historical_zone,
 									count=int( historical_count ) )
 								
 								weather_latitude = getattr( weather, 'latitude', None )
@@ -4130,10 +4061,8 @@ elif mode == 'Weather':
 								st.session_state[ 'weather_last_latitude' ] = weather_latitude
 								st.session_state[ 'weather_last_longitude' ] = weather_longitude
 								
-								set_global_coordinates_from_result(
-									weather_latitude,
-									weather_longitude,
-									location=historical_location,
+								set_global_coordinates_from_result( weather_latitude,
+									weather_longitude, location=historical_location,
 									description='Historical Weather result' )
 								
 								st.success( 'Historical Weather request completed.' )
@@ -4150,105 +4079,71 @@ elif mode == 'Weather':
 						st.session_state[ 'weather_last_longitude' ] = None
 			
 				st.divider( )
-				render_source_processing_controls( 'weather', 'weather_last_result', 'weather_last_source', 'Historical Weather', 'weather_historical_weather' )
-			# ------------------------------------------------------------------
-			# CLIMATE DATA
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'weather', 'weather_last_result',
+					'weather_last_source', 'Historical Weather', 'weather_historical_weather' )
+				
+			# --------- CLIMATE DATA
 			with st.expander( '🌡️ Climate Data', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.NOAA_CLIMATE_DATA )
 				climate_mode = st.selectbox( 'Mode',
 					options=[ 'datasets', 'data' ],
 					key='weather_climate_mode' )
 				
-				climate_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='weather_climate_timeout' )
+				climate_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='weather_climate_timeout' )
 				
 				if climate_mode == 'datasets':
-					climate_keyword = st.text_input(
-						'Keyword',
-						value='daily',
+					climate_keyword = st.text_input( 'Keyword', value='daily',
 						key='weather_climate_keyword' )
 					
-					climate_start_date_value = st.date_input(
-						'Start Date',
+					climate_start_date_value = st.date_input( 'Start Date',
 						value=dt.date.today( ) - dt.timedelta( days=365 ),
 						key='weather_climate_dataset_start_date' )
 					
-					climate_end_date_value = st.date_input(
-						'End Date',
-						value=dt.date.today( ),
+					climate_end_date_value = st.date_input( 'End Date', value=dt.date.today( ),
 						key='weather_climate_dataset_end_date' )
 					
-					climate_limit = st.number_input(
-						'Limit',
-						min_value=1,
-						max_value=1000,
+					climate_limit = st.number_input( 'Limit', min_value=1, max_value=1000,
 						value=25,
-						step=1,
-						key='weather_climate_dataset_limit' )
+						step=1, key='weather_climate_dataset_limit' )
 					
-					climate_offset = st.number_input(
-						'Offset',
-						min_value=0,
-						max_value=100000,
-						value=0,
-						step=1,
-						key='weather_climate_dataset_offset' )
+					climate_offset = st.number_input( 'Offset', min_value=0, max_value=100000,
+						value=0, step=1, key='weather_climate_dataset_offset' )
 					
 					climate_dataset = ''
 					climate_stations = ''
 					climate_data_types = ''
 				
 				else:
-					climate_dataset = st.text_input(
-						'Dataset',
-						value='daily-summaries',
-						help='Example: daily-summaries',
-						key='weather_climate_dataset' )
+					climate_dataset = st.text_input( 'Dataset', value='daily-summaries',
+						help='Example: daily-summaries', key='weather_climate_dataset' )
 					
 					climate_data_c1, climate_data_c2 = st.columns( 2 )
 					with climate_data_c1:
-						climate_start_date_value = st.date_input(
-							'Start Date',
+						climate_start_date_value = st.date_input( 'Start Date',
 							value=dt.date.today( ) - dt.timedelta( days=30 ),
 							key='weather_climate_data_start_date' )
 					
 					with climate_data_c2:
-						climate_end_date_value = st.date_input(
-							'End Date',
-							value=dt.date.today( ),
+						climate_end_date_value = st.date_input( 'End Date', value=dt.date.today( ),
 							key='weather_climate_data_end_date' )
 					
-					climate_stations = st.text_input(
-						'Stations',
-						value='',
+					climate_stations = st.text_input( 'Stations', value='',
 						help='Optional comma-separated station identifiers.',
 						key='weather_climate_stations' )
 					
-					climate_data_types = st.text_input(
-						'Data Types',
-						value='',
+					climate_data_types = st.text_input( 'Data Types', value='',
 						help='Optional comma-separated data type identifiers.',
 						key='weather_climate_data_types' )
 					
-					climate_limit = st.number_input(
-						'Limit',
-						min_value=1,
-						max_value=1000,
+					climate_limit = st.number_input( 'Limit', min_value=1, max_value=1000,
 						value=25,
-						step=1,
-						key='weather_climate_data_limit' )
+						step=1, key='weather_climate_data_limit' )
 					
 					climate_offset = 0
 					climate_keyword = ''
 				
 				climate_btn_c1, climate_btn_c2 = st.columns( 2 )
-				
 				with climate_btn_c1:
 					if st.button( label='Run', icon='🏃', key='weather_climate_run',
 							use_container_width=True ):
@@ -4256,12 +4151,10 @@ elif mode == 'Weather':
 							service = ClimateData( )
 							
 							if climate_mode == 'datasets':
-								result = service.fetch_datasets(
-									keyword=climate_keyword,
+								result = service.fetch_datasets( keyword=climate_keyword,
 									start_date=climate_start_date_value.isoformat( ),
 									end_date=climate_end_date_value.isoformat( ),
-									limit=int( climate_limit ),
-									offset=int( climate_offset ),
+									limit=int( climate_limit ), offset=int( climate_offset ),
 									time=int( climate_timeout ) )
 							
 							else:
@@ -4269,14 +4162,11 @@ elif mode == 'Weather':
 									st.warning( 'Enter a dataset identifier.' )
 									result = None
 								else:
-									result = service.fetch_data(
-										dataset=climate_dataset,
+									result = service.fetch_data( dataset=climate_dataset,
 										start_date=climate_start_date_value.isoformat( ),
 										end_date=climate_end_date_value.isoformat( ),
-										stations=climate_stations,
-										data_types=climate_data_types,
-										limit=int( climate_limit ),
-										time=int( climate_timeout ) )
+										stations=climate_stations, data_types=climate_data_types,
+										limit=int( climate_limit ), time=int( climate_timeout ) )
 							
 							if result is not None:
 								st.session_state[ 'weather_last_source' ] = 'Climate Data'
@@ -4291,36 +4181,28 @@ elif mode == 'Weather':
 				with climate_btn_c2:
 					if st.button( label='Clear', icon='🧹', key='weather_climate_clear',
 							use_container_width=True ):
+						
 						st.session_state[ 'weather_last_source' ] = ''
 						st.session_state[ 'weather_last_result' ] = { }
 						st.session_state[ 'weather_last_latitude' ] = None
 						st.session_state[ 'weather_last_longitude' ] = None
 			
 				st.divider( )
-				render_source_processing_controls( 'weather', 'weather_last_result', 'weather_last_source', 'Climate Data', 'weather_climate_data' )
-			# ------------------------------------------------------------------
-			# TIDES AND CURRENTS
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'weather', 'weather_last_result',
+					'weather_last_source', 'Climate Data', 'weather_climate_data' )
+			
+			# --------- TIDES AND CURRENTS
 			with st.expander( '🌊 Tides & Currents', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.NOAA_TIDES_CURRENTS )
-				tides_mode = st.selectbox(
-					'Mode',
+				tides_mode = st.selectbox( 'Mode',
 					options=[ 'station', 'water-level', 'tide-predictions' ],
 					key='weather_tides_mode' )
 				
-				tides_station_id = st.text_input(
-					'Station ID',
-					value='8594900',
-					help='Example NOAA station: 8594900',
-					key='weather_tides_station_id' )
+				tides_station_id = st.text_input( 'Station ID', value='8594900',
+					help='Example NOAA station: 8594900', key='weather_tides_station_id' )
 				
-				tides_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='weather_tides_timeout' )
+				tides_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='weather_tides_timeout' )
 				
 				if tides_mode == 'station':
 					tides_begin_date = ''
@@ -4333,15 +4215,12 @@ elif mode == 'Weather':
 				else:
 					tides_date_c1, tides_date_c2 = st.columns( 2 )
 					with tides_date_c1:
-						tides_begin = st.date_input(
-							'Begin Date',
+						tides_begin = st.date_input( 'Begin Date',
 							value=dt.date.today( ) - dt.timedelta( days=1 ),
 							key='weather_tides_begin_date' )
 					
 					with tides_date_c2:
-						tides_end = st.date_input(
-							'End Date',
-							value=dt.date.today( ),
+						tides_end = st.date_input( 'End Date', value=dt.date.today( ),
 							key='weather_tides_end_date' )
 					
 					tides_begin_date = tides_begin.strftime( '%Y%m%d' )
@@ -4352,42 +4231,29 @@ elif mode == 'Weather':
 						options=[ 'MLLW', 'MLW', 'MSL', 'MHW', 'MHHW', 'NAVD' ],
 						key='weather_tides_datum' )
 					
-					tides_units = st.selectbox(
-						'Units',
-						options=[ 'metric', 'english' ],
+					tides_units = st.selectbox( 'Units', options=[ 'metric', 'english' ],
 						key='weather_tides_units' )
 					
-					tides_time_zone = st.selectbox(
-						'Time Zone',
-						options=[ 'gmt', 'lst', 'lst_ldt' ],
-						key='weather_tides_time_zone' )
+					tides_time_zone = st.selectbox( 'Time Zone',
+						options=[ 'gmt', 'lst', 'lst_ldt' ], key='weather_tides_time_zone' )
 					
 					if tides_mode == 'tide-predictions':
-						tides_interval = st.selectbox(
-							'Interval',
-							options=[ 'hilo', 'h' ],
+						tides_interval = st.selectbox( 'Interval', options=[ 'hilo', 'h' ],
 							key='weather_tides_interval' )
 					else:
 						tides_interval = 'hilo'
 				
 				tides_btn_c1, tides_btn_c2 = st.columns( 2 )
-				
 				with tides_btn_c1:
 					if st.button( label='Run', icon='🏃', key='weather_tides_run',
 							use_container_width=True ):
 						try:
 							service = TidesAndCurrents( )
 							
-							result = service.fetch(
-								mode=tides_mode,
-								station_id=tides_station_id,
-								begin_date=tides_begin_date,
-								end_date=tides_end_date,
-								datum=tides_datum,
-								units=tides_units,
-								time_zone=tides_time_zone,
-								interval=tides_interval,
-								time=int( tides_timeout ) )
+							result = service.fetch( mode=tides_mode, station_id=tides_station_id,
+								begin_date=tides_begin_date, end_date=tides_end_date,
+								datum=tides_datum, units=tides_units, time_zone=tides_time_zone,
+								interval=tides_interval, time=int( tides_timeout ) )
 							
 							st.session_state[ 'weather_last_source' ] = 'Tides & Currents'
 							st.session_state[ 'weather_last_result' ] = result or { }
@@ -4407,9 +4273,15 @@ elif mode == 'Weather':
 						st.session_state[ 'weather_last_longitude' ] = None
 		
 				st.divider( )
-				render_source_processing_controls( 'weather', 'weather_last_result', 'weather_last_source', 'Tides & Currents', 'weather_tides_currents' )
+				render_source_processing_controls( 'weather', 'weather_last_result',
+					'weather_last_source', 'Tides & Currents', 'weather_tides_currents' )
+				
 		with weather_c2:
 			render_mode_document_tabs( 'weather', '📄 Loaded' )
+
+# ==============================================================================
+# ENVIRONMENTAL MODE
+# ==============================================================================
 elif mode == 'Environmental':
 	left, center, right = st.columns( [ 0.025, 0.95, 0.025 ] )
 	with center:
@@ -4432,20 +4304,13 @@ elif mode == 'Environmental':
 		
 		enviro_c1, enviro_c2 = st.columns( [ 0.40, 0.60 ], border=True, gap='xsmall' )
 		with enviro_c1:
-			# ------------------------------------------------------------------
-			# AIRNOW AIR QUALITY
-			# ------------------------------------------------------------------
+			
+			# --------- AIRNOW AIR QUALITY
 			with st.expander( '🌫️ AirNow Air Quality', expanded=True ):
 				st.badge( label='About API', color='blue', help=cfg.AIR_NOW )
-				airnow_mode = st.selectbox(
-					'Mode',
-					options=[
-							'Current by ZIP',
-							'Current by Coordinates',
-							'Forecast by ZIP',
-							'Forecast by Coordinates'
-					],
-					key='env_airnow_mode' )
+				airnow_mode = st.selectbox( 'Mode',
+					options=[ 'Current by ZIP', 'Current by Coordinates', 'Forecast by ZIP',
+							'Forecast by Coordinates' ], key='env_airnow_mode' )
 				
 				airnow_distance = st.number_input( 'Distance', min_value=0, max_value=250,
 					value=25, step=1, key='input_env_airnow_distance' )
@@ -4566,9 +4431,8 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'AirNow', 'env_airnow' )
-			# ------------------------------------------------------------------
-			# UV INDEX
-			# ------------------------------------------------------------------
+			
+			# --------- UV INDEX
 			with st.expander( '☀️ UV Index', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.AIR_NOW )
 				uv_mode = st.selectbox(
@@ -4676,9 +4540,8 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'UV Index', 'env_uv_index' )
-			# ------------------------------------------------------------------
-			# OPENAQ
-			# ------------------------------------------------------------------
+			
+			# --------- OPENAQ
 			with st.expander( '🧪 OpenAQ', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.OPEN_AQ )
 				openaq_mode = st.selectbox( 'Mode',
@@ -4818,9 +4681,8 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'OpenAQ', 'env_openaq' )
-			# ------------------------------------------------------------------
-			# PURPLEAIR SENSORS
-			# ------------------------------------------------------------------
+			
+			# --------- PURPLEAIR SENSORS
 			with st.expander( '🟣 PurpleAir Sensors', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.PURPLE_AIR )
 				purple_mode = st.selectbox(
@@ -4967,43 +4829,25 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'PurpleAir', 'env_purpleair' )
-			# ------------------------------------------------------------------
-			# ENVIROFACTS
-			# ------------------------------------------------------------------
+			
+			# --------- ENVIROFACTS
 			with st.expander( '🏭 EPA EnviroFacts Facilities', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.EPA_ENVIROFACTS )
-				envirofacts_table = st.selectbox(
-					'Table',
+				envirofacts_table = st.selectbox( 'Table',
 					options=[ 'TRI_FACILITY', 'TRI_RELEASE', 'EF_W_EMISSIONS_SOURCE_GHG' ],
 					key='env_envirofacts_table' )
 				
-				envirofacts_state = st.text_input(
-					'State Code',
-					value='',
-					help='Optional two-letter state filter.',
-					key='env_envirofacts_state' )
+				envirofacts_state = st.text_input( 'State Code', value='',
+					help='Optional two-letter state filter.', key='env_envirofacts_state' )
 				
-				envirofacts_facility = st.text_input(
-					'Facility Name',
-					value='',
-					help='Optional facility-name prefix filter.',
-					key='env_envirofacts_facility' )
+				envirofacts_facility = st.text_input( 'Facility Name', value='',
+					help='Optional facility-name prefix filter.', key='env_envirofacts_facility' )
 				
-				envirofacts_limit = st.number_input(
-					'Limit',
-					min_value=1,
-					max_value=500,
-					value=25,
-					step=1,
-					key='env_envirofacts_limit' )
+				envirofacts_limit = st.number_input( 'Limit', min_value=1, max_value=500, value=25,
+					step=1, key='env_envirofacts_limit' )
 				
-				envirofacts_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='env_envirofacts_timeout' )
+				envirofacts_timeout = st.number_input( 'Timeout', min_value=1, max_value=60,
+					value=20, step=1, key='env_envirofacts_timeout' )
 				
 				envirofacts_btn_c1, envirofacts_btn_c2 = st.columns( 2 )
 				
@@ -5038,59 +4882,33 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'EnviroFacts', 'env_envirofacts' )
-			# ------------------------------------------------------------------
-			# FIRMS FIRE / THERMAL ANOMALIES
-			# ------------------------------------------------------------------
+			
+			# --------- FIRMS FIRE / THERMAL ANOMALIES
 			with st.expander( '🔥 NASA FIRMS', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.NASA_FIRMS )
-				firms_source = st.selectbox(
-					'Source',
-					options=[
-							'MODIS_NRT',
-							'MODIS_SP',
-							'VIIRS_SNPP_NRT',
-							'VIIRS_SNPP_SP',
-							'VIIRS_NOAA20_NRT',
-							'VIIRS_NOAA20_SP',
-							'VIIRS_NOAA21_NRT',
-							'LANDSAT_NRT'
-					],
-					key='env_firms_source' )
+				firms_source = st.selectbox( 'Source',
+					options=[ 'MODIS_NRT', 'MODIS_SP', 'VIIRS_SNPP_NRT', 'VIIRS_SNPP_SP',
+							'VIIRS_NOAA20_NRT', 'VIIRS_NOAA20_SP', 'VIIRS_NOAA21_NRT',
+							'LANDSAT_NRT' ], key='env_firms_source' )
 				
-				firms_area_mode = st.selectbox(
-					'Area Mode',
-					options=[ 'World', 'Bounding Box' ],
+				firms_area_mode = st.selectbox( 'Area Mode', options=[ 'World', 'Bounding Box' ],
 					key='env_firms_area_mode' )
 				
-				firms_day_range = st.number_input(
-					'Day Range',
-					min_value=1,
-					max_value=5,
-					value=1,
-					step=1,
-					key='env_firms_day_range' )
+				firms_day_range = st.number_input( 'Day Range', min_value=1, max_value=5, value=1,
+					step=1, key='env_firms_day_range' )
 				
-				firms_use_date = st.checkbox(
-					'Use Start Date',
-					value=False,
+				firms_use_date = st.checkbox( 'Use Start Date', value=False,
 					key='env_firms_use_date' )
 				
 				if firms_use_date:
-					firms_date_value = st.date_input(
-						'Date',
-						value=dt.date.today( ),
+					firms_date_value = st.date_input( 'Date', value=dt.date.today( ),
 						key='env_firms_date' )
 					firms_date = firms_date_value.isoformat( )
 				else:
 					firms_date = ''
 				
-				firms_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='env_firms_timeout' )
+				firms_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='env_firms_timeout' )
 				
 				if firms_area_mode == 'World':
 					firms_area_coordinates = 'world'
@@ -5182,76 +5000,47 @@ elif mode == 'Environmental':
 			
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'FIRMS', 'env_firms' )
-			# ------------------------------------------------------------------
-			# EONET NATURAL EVENTS
-			# ------------------------------------------------------------------
+			
+			# --------- EONET NATURAL EVENTS
 			with st.expander( '🌎 NASA Earth Observatory Natural Events', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.NASA_EONET )
-				eonet_mode = st.selectbox(
-					'Mode',
-					options=[ 'events', 'categories' ],
+				eonet_mode = st.selectbox( 'Mode', options=[ 'events', 'categories' ],
 					key='env_eonet_mode' )
 				
-				eonet_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='env_eonet_timeout' )
+				eonet_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='env_eonet_timeout' )
 				
 				if eonet_mode == 'events':
-					eonet_source = st.text_input(
-						'Source',
-						value='',
+					eonet_source = st.text_input( 'Source', value='',
 						help='Optional EONET source identifier or comma-separated identifiers.',
 						key='env_eonet_source' )
 					
-					eonet_category = st.text_input(
-						'Category',
-						value='',
+					eonet_category = st.text_input( 'Category', value='',
 						help='Optional EONET category identifier or comma-separated identifiers.',
 						key='env_eonet_category' )
 					
-					eonet_status = st.selectbox(
-						'Status',
-						options=[ 'open', 'closed', 'all' ],
+					eonet_status = st.selectbox( 'Status', options=[ 'open', 'closed', 'all' ],
 						key='env_eonet_status' )
 					
-					eonet_limit = st.number_input(
-						'Limit',
-						min_value=1,
-						max_value=500,
-						value=25,
-						step=1,
-						key='env_eonet_limit' )
+					eonet_limit = st.number_input( 'Limit', min_value=1, max_value=500, value=25,
+						step=1, key='env_eonet_limit' )
 					
-					eonet_days = st.number_input(
-						'Days',
-						min_value=1,
-						max_value=3650,
-						value=30,
-						step=1,
-						key='env_eonet_days' )
+					eonet_days = st.number_input( 'Days', min_value=1, max_value=3650, value=30,
+						step=1, key='env_eonet_days' )
 					
-					eonet_use_dates = st.checkbox(
-						'Use Start / End Dates',
-						value=False,
+					eonet_use_dates = st.checkbox( 'Use Start / End Dates', value=False,
 						key='env_eonet_use_dates' )
 					
 					if eonet_use_dates:
 						eonet_date_c1, eonet_date_c2 = st.columns( 2 )
 						
 						with eonet_date_c1:
-							eonet_start_value = st.date_input(
-								'Start Date',
+							eonet_start_value = st.date_input( 'Start Date',
 								value=dt.date.today( ) - dt.timedelta( days=30 ),
 								key='env_eonet_start_date' )
 						
 						with eonet_date_c2:
-							eonet_end_value = st.date_input(
-								'End Date',
-								value=dt.date.today( ),
+							eonet_end_value = st.date_input( 'End Date', value=dt.date.today( ),
 								key='env_eonet_end_date' )
 						
 						eonet_start_date = eonet_start_value.isoformat( )
@@ -5261,14 +5050,11 @@ elif mode == 'Environmental':
 						eonet_start_date = ''
 						eonet_end_date = ''
 					
-					eonet_use_bbox = st.checkbox(
-						'Use Bounding Box',
-						value=False,
+					eonet_use_bbox = st.checkbox( 'Use Bounding Box', value=False,
 						key='env_eonet_use_bbox' )
 					
 					if eonet_use_bbox:
-						st.caption(
-							'Bounding box defaults are centered on the global latitude and longitude.' )
+						st.caption( 'Bounding box defaults are on the global latitude and longitude.' )
 						
 						eonet_box_c1, eonet_box_c2 = st.columns( 2 )
 						
@@ -5376,8 +5162,13 @@ elif mode == 'Environmental':
 		
 				st.divider( )
 				render_source_processing_controls( 'env', 'env_last_result', 'env_last_source', 'EONET', 'env_eonet' )
+		
 		with enviro_c2:
 			render_mode_document_tabs( 'env', '📄 Loaded' )
+			
+# ==============================================================================
+# ASTRONOMICAL MODE
+# ==============================================================================
 elif mode == 'Astronomical':
 	left, center, right = st.columns( [ 0.025, 0.95, 0.025 ] )
 	with center:
@@ -5396,11 +5187,9 @@ elif mode == 'Astronomical':
 		set_blue_divider( )
 		
 		astro_c1, astro_c2 = st.columns( [ 0.40, 0.60 ], border=True, gap='xsmall' )
-		
 		with astro_c1:
-			# ------------------------------------------------------------------
-			# NAVAL OBSERVATORY
-			# ------------------------------------------------------------------
+			
+			# --------- NAVAL OBSERVATORY
 			with st.expander( '🧭 Naval Observatory', expanded=True ):
 				st.badge( label='About API', color='blue', help=cfg.US_NAVAL_OBSERVATORY )
 				naval_date = st.date_input( 'Date', value=dt.date.today( ),
@@ -5412,31 +5201,19 @@ elif mode == 'Astronomical':
 				
 				naval_c1, naval_c2 = st.columns( 2 )
 				with naval_c1:
-					naval_latitude = st.number_input(
-						'Observer Latitude',
-						value=float( global_latitude ),
-						format='%.6f',
-						key='astro_naval_latitude' )
+					naval_latitude = st.number_input( 'Observer Latitude',
+						value=float( global_latitude ), format='%.6f', key='astro_naval_latitude' )
 				
 				with naval_c2:
-					naval_longitude = st.number_input(
-						'Observer Longitude',
-						value=float( global_longitude ),
-						format='%.6f',
+					naval_longitude = st.number_input( 'Observer Longitude',
+						value=float( global_longitude ), format='%.6f',
 						key='astro_naval_longitude' )
 				
-				naval_location_label = st.text_input(
-					'Location Label',
-					value=global_location,
+				naval_location_label = st.text_input( 'Location Label', value=global_location,
 					key='astro_naval_location_label' )
 				
-				naval_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='astro_naval_timeout' )
+				naval_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='astro_naval_timeout' )
 				
 				naval_btn_c1, naval_btn_c2 = st.columns( 2 )
 				with naval_btn_c1:
@@ -5486,115 +5263,65 @@ elif mode == 'Astronomical':
 			
 				st.divider( )
 				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Naval Observatory', 'astro_naval_observatory' )
-			# ------------------------------------------------------------------
-			# SPACE WEATHER
-			# ------------------------------------------------------------------
+			
+			# --------- SPACE WEATHER
 			with st.expander( '☀️ Space Weather', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.SPACE_WEATHER )
 				space_mode = st.selectbox( 'Mode',
-					options=[
-							'cme',
-							'cme_analysis',
-							'gst',
-							'ips',
-							'flr',
-							'sep',
-							'mpc',
-							'rbe',
-							'hss',
-							'wsa_enlil',
-							'notifications'
-					], key='astro_space_mode' )
+					options=[ 'cme', 'cme_analysis', 'gst', 'ips', 'flr', 'sep', 'mpc', 'rbe',
+					          'hss', 'wsa_enlil', 'notifications' ], key='astro_space_mode' )
 				
 				space_date_c1, space_date_c2 = st.columns( 2 )
 				with space_date_c1:
-					space_start = st.date_input(
-						'Start Date',
+					space_start = st.date_input( 'Start Date',
 						value=dt.date.today( ) - dt.timedelta( days=7 ),
 						key='astro_space_start_date' )
 				
 				with space_date_c2:
-					space_end = st.date_input(
-						'End Date',
-						value=dt.date.today( ),
+					space_end = st.date_input( 'End Date', value=dt.date.today( ),
 						key='astro_space_end_date' )
 				
-				space_location = st.text_input(
-					'Location',
-					value='ALL',
+				space_location = st.text_input( 'Location', value='ALL',
 					key='astro_space_location' )
 				
-				space_catalog = st.text_input(
-					'Catalog',
-					value='ALL',
-					key='astro_space_catalog' )
+				space_catalog = st.text_input( 'Catalog', value='ALL', key='astro_space_catalog' )
 				
-				space_notification_type = st.text_input(
-					'Notification Type',
-					value='all',
+				space_notification_type = st.text_input( 'Notification Type', value='all',
 					key='astro_space_notification_type' )
 				
 				space_c1, space_c2 = st.columns( 2 )
 				with space_c1:
-					space_most_accurate_only = st.checkbox(
-						'Most Accurate Only',
-						value=True,
+					space_most_accurate_only = st.checkbox( 'Most Accurate Only', value=True,
 						key='astro_space_most_accurate_only' )
 					
-					space_complete_entry_only = st.checkbox(
-						'Complete Entry Only',
-						value=True,
+					space_complete_entry_only = st.checkbox( 'Complete Entry Only', value=True,
 						key='astro_space_complete_entry_only' )
 				
 				with space_c2:
-					space_speed = st.number_input(
-						'Speed',
-						min_value=0,
-						max_value=5000,
-						value=0,
-						step=10,
-						key='astro_space_speed' )
+					space_speed = st.number_input( 'Speed', min_value=0, max_value=5000, value=0,
+						step=10, key='astro_space_speed' )
 					
-					space_half_angle = st.number_input(
-						'Half Angle',
-						min_value=0,
-						max_value=360,
-						value=0,
-						step=1,
-						key='astro_space_half_angle' )
+					space_half_angle = st.number_input( 'Half Angle', min_value=0, max_value=360,
+						value=0, step=1, key='astro_space_half_angle' )
 				
-				space_keyword = st.text_input(
-					'Keyword',
-					value='',
-					key='astro_space_keyword' )
-				
-				space_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='astro_space_timeout' )
+				space_keyword = st.text_input( 'Keyword', value='', key='astro_space_keyword' )
+				space_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='astro_space_timeout' )
 				
 				space_btn_c1, space_btn_c2 = st.columns( 2 )
-				
 				with space_btn_c1:
 					if st.button( label='Run', icon='🏃', key='astro_space_run',
 							use_container_width=True ):
 						try:
 							service = SpaceWeather( )
-							result = service.fetch(
-								mode=space_mode,
+							result = service.fetch( mode=space_mode,
 								start_date=space_start.isoformat( ),
-								end_date=space_end.isoformat( ),
-								time=int( space_timeout ),
-								location=space_location,
-								catalog=space_catalog,
+								end_date=space_end.isoformat( ), time=int( space_timeout ),
+								location=space_location, catalog=space_catalog,
 								notification_type=space_notification_type,
 								most_accurate_only=bool( space_most_accurate_only ),
 								complete_entry_only=bool( space_complete_entry_only ),
-								speed=int( space_speed ),
-								half_angle=int( space_half_angle ),
+								speed=int( space_speed ), half_angle=int( space_half_angle ),
 								keyword=space_keyword,
 								api_key=getattr( cfg, 'NASA_API_KEY', None ) )
 							
@@ -5611,6 +5338,7 @@ elif mode == 'Astronomical':
 				with space_btn_c2:
 					if st.button( label='Clear', icon='🧹', key='astro_space_clear',
 							use_container_width=True ):
+						
 						st.session_state[ 'astro_last_source' ] = ''
 						st.session_state[ 'astro_last_result' ] = { }
 						st.session_state[ 'astro_last_latitude' ] = None
@@ -5618,10 +5346,10 @@ elif mode == 'Astronomical':
 						st.session_state[ 'astro_last_url' ] = ''
 			
 				st.divider( )
-				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Space Weather', 'astro_space_weather' )
-			# ------------------------------------------------------------------
-			# STAR CHART
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'astro', 'astro_last_result',
+					'astro_last_source', 'Space Weather', 'astro_space_weather' )
+				
+			# --------- STAR CHART
 			with st.expander( '✨ Star Chart', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.STAR_CHART )
 				chart_mode = st.selectbox( 'Mode',
@@ -5635,9 +5363,7 @@ elif mode == 'Astronomical':
 					key='astro_chart_image_source' )
 				
 				if chart_mode == 'Object Chart':
-					chart_object_name = st.text_input(
-						'Object Name',
-						value='M31',
+					chart_object_name = st.text_input( 'Object Name', value='M31',
 						key='astro_chart_object_name' )
 					
 					chart_ra = 0.0
@@ -5647,18 +5373,12 @@ elif mode == 'Astronomical':
 					chart_object_name = ''
 					coord_c1, coord_c2 = st.columns( 2 )
 					with coord_c1:
-						chart_ra = st.number_input(
-							'Right Ascension',
-							value=10.6847083,
-							format='%.7f',
-							key='astro_chart_ra' )
+						chart_ra = st.number_input( 'Right Ascension', value=10.6847083,
+							format='%.7f', key='astro_chart_ra' )
 					
 					with coord_c2:
-						chart_dec = st.number_input(
-							'Declination',
-							value=41.2687500,
-							format='%.7f',
-							key='astro_chart_dec' )
+						chart_dec = st.number_input( 'Declination', value=41.2687500,
+							format='%.7f', key='astro_chart_dec' )
 				
 				chart_box_color = st.selectbox( 'Box Color',
 					options=[ 'yellow', 'red', 'green', 'blue', 'white' ],
@@ -5808,9 +5528,8 @@ elif mode == 'Astronomical':
 			
 				st.divider( )
 				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Star Chart', 'astro_star_chart' )
-			# ------------------------------------------------------------------
-			# SATELLITE CENTER
-			# ------------------------------------------------------------------
+			
+			# --------- SATELLITE CENTER
 			with st.expander( '🛰️ Satellite Center', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.SATELLITE_CENTER )
 				satellite_mode = st.selectbox( 'Mode',
@@ -5825,40 +5544,26 @@ elif mode == 'Astronomical':
 						help='Comma-separated observatory identifiers such as iss or mms1,mms2.',
 						key='astro_satellite_query' )
 					
-					satellite_start_date = st.date_input(
-						'Start Date',
+					satellite_start_date = st.date_input( 'Start Date',
 						value=dt.date.today( ) - dt.timedelta( days=1 ),
 						key='astro_satellite_start_date' )
 					
-					satellite_start_time = st.text_input(
-						'Start Time',
-						value='00:00:00Z',
-						help='Use UTC time ending in Z.',
-						key='astro_satellite_start_time' )
+					satellite_start_time = st.text_input( 'Start Time', value='00:00:00Z',
+						help='Use UTC time ending in Z.', key='astro_satellite_start_time' )
 					
-					satellite_end_date = st.date_input(
-						'End Date',
-						value=dt.date.today( ),
+					satellite_end_date = st.date_input( 'End Date', value=dt.date.today( ),
 						key='astro_satellite_end_date' )
 					
-					satellite_end_time = st.text_input(
-						'End Time',
-						value='00:00:00Z',
+					satellite_end_time = st.text_input( 'End Time', value='00:00:00Z',
 						help='Use UTC time ending in Z.',
 						key='astro_satellite_end_time' )
 					
-					satellite_coordinate_systems = st.text_input(
-						'Coordinate Systems',
-						value='gse',
+					satellite_coordinate_systems = st.text_input( 'Coordinate Systems', value='gse',
 						help='Comma-separated coordinate systems such as gse, geo, or gsm.',
 						key='astro_satellite_coordinate_systems' )
 					
-					satellite_resolution_factor = st.number_input(
-						'Resolution Factor',
-						min_value=1,
-						max_value=10000,
-						value=1,
-						step=1,
+					satellite_resolution_factor = st.number_input( 'Resolution Factor',
+						min_value=1, max_value=10000, value=1, step=1,
 						key='astro_satellite_resolution_factor' )
 				
 				else:
@@ -5885,11 +5590,8 @@ elif mode == 'Astronomical':
 								start_value = ''
 								end_value = ''
 							
-							result = service.fetch(
-								mode=satellite_mode,
-								query=satellite_query,
-								start_time=start_value,
-								end_time=end_value,
+							result = service.fetch( mode=satellite_mode, query=satellite_query,
+								start_time=start_value, end_time=end_value,
 								coordinate_systems=satellite_coordinate_systems,
 								resolution_factor=int( satellite_resolution_factor ),
 								time=int( satellite_timeout ) )
@@ -5907,6 +5609,7 @@ elif mode == 'Astronomical':
 				with satellite_btn_c2:
 					if st.button( label='Clear', icon='🧹', key='astro_satellite_clear',
 							use_container_width=True ):
+						
 						st.session_state[ 'astro_last_source' ] = ''
 						st.session_state[ 'astro_last_result' ] = { }
 						st.session_state[ 'astro_last_latitude' ] = None
@@ -5914,32 +5617,24 @@ elif mode == 'Astronomical':
 						st.session_state[ 'astro_last_url' ] = ''
 			
 				st.divider( )
-				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Satellite Center', 'astro_satellite_center' )
-			# ------------------------------------------------------------------
-			# ASTRO CATALOG
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source',
+					'Satellite Center', 'astro_satellite_center' )
+			
+			# --------- ASTRO CATALOG
 			with st.expander( '🔭 Astro Catalog', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.ASTRONOMY_CATALOG )
-				catalog_mode = st.selectbox(
-					'Mode',
-					options=[ 'object_query', 'cone_search' ],
+				catalog_mode = st.selectbox( 'Mode', options=[ 'object_query', 'cone_search' ],
 					key='astro_catalog_mode' )
 				
-				catalog_quantity = st.text_input(
-					'Quantity',
-					value='',
+				catalog_quantity = st.text_input( 'Quantity', value='',
 					help='Optional Open Astronomy Catalog quantity path segment.',
 					key='astro_catalog_quantity' )
 				
-				catalog_attributes = st.text_input(
-					'Attributes',
-					value='',
+				catalog_attributes = st.text_input( 'Attributes', value='',
 					help='Optional comma-separated attribute path segments.',
 					key='astro_catalog_attributes' )
 				
-				catalog_arguments = st.text_area(
-					'Arguments',
-					value='',
+				catalog_arguments = st.text_area( 'Arguments', value='',
 					help='Optional comma-separated or newline-separated key=value arguments.',
 					key='astro_catalog_arguments' )
 				
@@ -6026,28 +5721,19 @@ elif mode == 'Astronomical':
 			
 				st.divider( )
 				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Astro Catalog', 'astro_astro_catalog' )
-			# ------------------------------------------------------------------
-			# ASTROQUERY / SIMBAD
-			# ------------------------------------------------------------------
+			
+			# --------- ASTROQUERY / SIMBAD
 			with st.expander( '🌌 AstroQuery / SIMBAD', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.ASTRO_QUERY )
-				astroquery_mode = st.selectbox(
-					'Mode',
+				astroquery_mode = st.selectbox( 'Mode',
 					options=[ 'object_search', 'object_ids', 'region_search' ],
 					key='astro_astroquery_mode' )
 				
-				astroquery_row_limit = st.number_input(
-					'Row Limit',
-					min_value=1,
-					max_value=10000,
-					value=100,
-					step=1,
-					key='astro_astroquery_row_limit' )
+				astroquery_row_limit = st.number_input( 'Row Limit', min_value=1, max_value=10000,
+					value=100, step=1, key='astro_astroquery_row_limit' )
 				
 				if astroquery_mode in [ 'object_search', 'object_ids' ]:
-					astroquery_query = st.text_input(
-						'Object Name',
-						value='M31',
+					astroquery_query = st.text_input( 'Object Name', value='M31',
 						key='astro_astroquery_query' )
 					
 					astroquery_ra = ''
@@ -6118,9 +5804,8 @@ elif mode == 'Astronomical':
 			
 				st.divider( )
 				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'AstroQuery / SIMBAD', 'astro_astroquery_simbad' )
-			# ------------------------------------------------------------------
-			# STAR MAP
-			# ------------------------------------------------------------------
+			
+			# --------- STAR MAP
 			with st.expander( '🗺️ Star Map', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.STAR_MAP )
 				starmap_mode = st.selectbox(
@@ -6184,15 +5869,10 @@ elif mode == 'Astronomical':
 							use_container_width=True ):
 						try:
 							service = StarMap( )
-							result = service.fetch(
-								mode=starmap_mode,
-								query=starmap_query,
-								ra=float( starmap_ra ),
-								dec=float( starmap_dec ),
-								zoom=int( starmap_zoom ),
-								image_source=starmap_image_source,
-								box_color=starmap_box_color,
-								show_box=bool( starmap_show_box ),
+							result = service.fetch( mode=starmap_mode, query=starmap_query,
+								ra=float( starmap_ra ), dec=float( starmap_dec ),
+								zoom=int( starmap_zoom ), image_source=starmap_image_source,
+								box_color=starmap_box_color, show_box=bool( starmap_show_box ),
 								show_grid=bool( starmap_show_grid ),
 								show_lines=bool( starmap_show_lines ),
 								show_boundaries=bool( starmap_show_boundaries ),
@@ -6201,13 +5881,11 @@ elif mode == 'Astronomical':
 							
 							result_url = ''
 							if isinstance( result, dict ):
-								result_url = (
-										result.get( 'preferred_image_url', '' )
+								result_url = ( result.get( 'preferred_image_url', '' )
 										or result.get( 'snapshot_page_url', '' )
 										or result.get( 'object_page_url', '' )
 										or result.get( 'coordinate_page_url', '' )
-										or result.get( 'url', '' )
-								)
+										or result.get( 'url', '' ) )
 							
 							st.session_state[ 'astro_last_source' ] = 'Star Map'
 							st.session_state[ 'astro_last_result' ] = normalize( result ) or { }
@@ -6229,9 +5907,15 @@ elif mode == 'Astronomical':
 						st.session_state[ 'astro_last_url' ] = ''
 		
 				st.divider( )
-				render_source_processing_controls( 'astro', 'astro_last_result', 'astro_last_source', 'Star Map', 'astro_star_map' )
+				render_source_processing_controls( 'astro', 'astro_last_result',
+					'astro_last_source', 'Star Map', 'astro_star_map' )
+				
 		with astro_c2:
 			render_mode_document_tabs( 'astro', '📄 Loaded' )
+			
+# ==============================================================================
+# CELESTIAL MAP MODE
+# ==============================================================================
 elif mode == 'Celestial Map':
 	left, center, right = st.columns( [ 0.025, 0.95, 0.025 ] )
 	with center:
@@ -6250,7 +5934,6 @@ elif mode == 'Celestial Map':
 		set_blue_divider( )
 		
 		control_c1, control_c2 = st.columns( [ 0.50, 0.50 ], border=True )
-		
 		with control_c1:
 			use_global_coordinates = st.checkbox(
 				'Use User-Location',
@@ -6263,24 +5946,15 @@ elif mode == 'Celestial Map':
 				
 				coord_c1, coord_c2 = st.columns( 2 )
 				with coord_c1:
-					st.number_input(
-						'Latitude',
-						value=celestial_latitude,
-						format='%.6f',
-						key='celestial_global_latitude_display',
-						disabled=True )
+					st.number_input( 'Latitude', value=celestial_latitude, format='%.6f',
+						key='celestial_global_latitude_display', disabled=True )
 				
 				with coord_c2:
-					st.number_input(
-						'Longitude',
-						value=celestial_longitude,
-						format='%.6f',
-						key='celestial_global_longitude_display',
-						disabled=True )
+					st.number_input( 'Longitude', value=celestial_longitude, format='%.6f',
+						key='celestial_global_longitude_display', disabled=True )
 			
 			else:
-				manual_default_latitude = (
-						float( location_state[ 'latitude' ] )
+				manual_default_latitude = ( float( location_state[ 'latitude' ] )
 						if has_global_coords
 						else get_global_latitude_default( ) )
 				
@@ -6291,35 +5965,25 @@ elif mode == 'Celestial Map':
 				
 				coord_c1, coord_c2 = st.columns( 2 )
 				with coord_c1:
-					celestial_latitude = st.number_input(
-						'Latitude',
+					celestial_latitude = st.number_input( 'Latitude',
 						value=manual_default_latitude,
-						format='%.6f',
-						key='celestial_manual_latitude' )
+						format='%.6f', key='celestial_manual_latitude' )
 				
 				with coord_c2:
-					celestial_longitude = st.number_input(
-						'Longitude',
-						value=manual_default_longitude,
-						format='%.6f',
+					celestial_longitude = st.number_input( 'Longitude',
+						value=manual_default_longitude, format='%.6f',
 						key='celestial_manual_longitude' )
 		
 		with control_c2:
-			celestial_location = st.text_input(
-				'Location Label',
+			celestial_location = st.text_input( 'Location Label',
 				value=compose_location_from_state( ) or global_location,
 				key='celestial_location_label' )
 			
-			celestial_zoom = st.slider(
-				'Location Picker Zoom',
-				min_value=1,
-				max_value=18,
+			celestial_zoom = st.slider( 'Location Picker Zoom', min_value=1, max_value=18,
 				value=int( st.session_state.get( 'zoom', 8 ) or 8 ),
 				key='celestial_location_picker_zoom' )
 			
-			save_coordinates = st.checkbox(
-				'Save Coordinates to Global State',
-				value=True,
+			save_coordinates = st.checkbox( 'Save Coordinates to Global State', value=True,
 				key='celestial_save_coordinates' )
 		
 		if not has_valid_coordinates( celestial_latitude, celestial_longitude ):
@@ -6327,22 +5991,16 @@ elif mode == 'Celestial Map':
 			st.stop( )
 		
 		if save_coordinates:
-			set_location_state(
-				location=celestial_location,
+			set_location_state( location=celestial_location,
 				description='Celestial Map observer location',
-				latitude=float( celestial_latitude ),
-				longitude=float( celestial_longitude ) )
+				latitude=float( celestial_latitude ), longitude=float( celestial_longitude ) )
 			st.session_state[ 'zoom' ] = int( celestial_zoom )
 		
 		set_blue_divider( )
 		
-		render_celestial_map(
-			asset_root='assets/starmap',
-			height=1400,
-			latitude=float( celestial_latitude ),
-			longitude=float( celestial_longitude ),
-			location=celestial_location,
-			zoom=int( celestial_zoom ) )
+		render_celestial_map( asset_root='assets/starmap', height=1400,
+			latitude=float( celestial_latitude ), longitude=float( celestial_longitude ),
+			location=celestial_location, zoom=int( celestial_zoom ) )
 		
 # ==============================================================================
 # GEOLOGICAL MODE
@@ -6367,9 +6025,8 @@ elif mode == 'Geological':
 		
 		geo_c1, geo_c2 = st.columns( [ 0.40, 0.60 ], border=True, gap='xsmall' )
 		with geo_c1:
-			# ------------------------------------------------------------------
-			# USGS EARTHQUAKES
-			# ------------------------------------------------------------------
+			
+			# --------- USGS EARTHQUAKES
 			with st.expander( '🌎 USGS Earthquakes', expanded=True ):
 				st.badge( label='About API', color='blue', help=cfg.USGS_EARTHQUAKES )
 				quake_mode = st.selectbox( 'Mode', options=[ 'feed', 'search' ],
@@ -6380,28 +6037,14 @@ elif mode == 'Geological':
 				
 				if quake_mode == 'feed':
 					quake_feed = st.selectbox( 'Feed',
-						options=[
-								'all_hour.geojson',
-								'all_day.geojson',
-								'all_week.geojson',
-								'all_month.geojson',
-								'1.0_hour.geojson',
-								'1.0_day.geojson',
-								'1.0_week.geojson',
-								'1.0_month.geojson',
-								'2.5_hour.geojson',
-								'2.5_day.geojson',
-								'2.5_week.geojson',
-								'2.5_month.geojson',
-								'4.5_hour.geojson',
-								'4.5_day.geojson',
-								'4.5_week.geojson',
-								'4.5_month.geojson',
-								'significant_hour.geojson',
-								'significant_day.geojson',
-								'significant_week.geojson',
-								'significant_month.geojson'
-						], key='geo_quake_feed' )
+						options=[ 'all_hour.geojson', 'all_day.geojson', 'all_week.geojson',
+								'all_month.geojson', '1.0_hour.geojson', '1.0_day.geojson',
+								'1.0_week.geojson', '1.0_month.geojson', '2.5_hour.geojson',
+								'2.5_day.geojson', '2.5_week.geojson', '2.5_month.geojson',
+								'4.5_hour.geojson', '4.5_day.geojson', '4.5_week.geojson',
+								'4.5_month.geojson', 'significant_hour.geojson',
+								'significant_day.geojson', 'significant_week.geojson',
+								'significant_month.geojson' ], key='geo_quake_feed' )
 					
 					quake_start_date = ''
 					quake_end_date = ''
@@ -6417,7 +6060,6 @@ elif mode == 'Geological':
 				
 				else:
 					quake_feed = 'all_day.geojson'
-					
 					search_c1, search_c2 = st.columns( 2 )
 					
 					with search_c1:
@@ -6469,13 +6111,10 @@ elif mode == 'Geological':
 								value=float( global_longitude ), format='%.6f',
 								key='geo_quake_longitude' )
 						
-						quake_radius = st.number_input( 'Maximum Radius KM',
-							min_value=1.0,
+						quake_radius = st.number_input( 'Maximum Radius KM', min_value=1.0,
 							max_value=20000.0,
 							value=float( st.session_state.get( 'radius', 500.0 ) or 500.0 ),
-							step=10.0,
-							format='%.1f',
-							key='geo_quake_radius' )
+							step=10.0, format='%.1f', key='geo_quake_radius' )
 					
 					else:
 						quake_latitude = None
@@ -6488,7 +6127,6 @@ elif mode == 'Geological':
 							use_container_width=True ):
 						try:
 							service = USGSEarthquakes( )
-							
 							result = service.fetch( mode=quake_mode, feed=quake_feed,
 								start_date=quake_start_date, end_date=quake_end_date,
 								min_magnitude=float( quake_min_magnitude ),
@@ -6525,44 +6163,37 @@ elif mode == 'Geological':
 						st.session_state[ 'geo_last_image_path' ] = ''
 			
 				st.divider( )
-				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source', 'USGS Earthquakes', 'geo_usgs_earthquakes' )
-			# ------------------------------------------------------------------
-			# GLOBAL IMAGERY
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source',
+					'USGS Earthquakes', 'geo_usgs_earthquakes' )
+				
+			# --------- GLOBAL IMAGERY
 			with st.expander( '🛰️ Global Imagery', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.NASA_GLOBAL_IMAGERY )
-				st.caption(
-					'Uses the original GlobalImagery fetcher. The current fetch_map_services() '
-					'writes the default NASA GIBS image to python-examples.'
-				)
+				st.caption( 'Uses the original GlobalImagery fetcher. The current fetch_map_services() '
+					'writes the default NASA GIBS image to python-examples.' )
 				
 				imagery_product = st.selectbox( 'Product',
 					options=[ 'NASA GIBS EPSG:4326 Default Map Service' ],
 					key='geo_imagery_product' )
 				
 				imagery_btn_c1, imagery_btn_c2 = st.columns( 2 )
-				
 				with imagery_btn_c1:
 					if st.button( label='Run', icon='🏃', key='geo_imagery_run',
 							use_container_width=True ):
+						
 						try:
 							Path( 'python-examples' ).mkdir( parents=True, exist_ok=True )
-							
 							service = GlobalImagery( )
 							result = service.fetch_map_services( )
 							
-							image_path = (
-									'python-examples/'
-									'MODIS_Terra_CorrectedReflectance_TrueColor.png'
-							)
+							image_path = ( 'python-examples/'
+									'MODIS_Terra_CorrectedReflectance_TrueColor.png' )
 							
 							st.session_state[ 'geo_last_source' ] = 'Global Imagery'
-							st.session_state[ 'geo_last_result' ] = {
-									'mode': 'fetch_map_services',
-									'product': imagery_product,
-									'image_path': image_path,
-									'result': str( result )
-							}
+							st.session_state[ 'geo_last_result' ] = { 'mode': 'fetch_map_services',
+									'product': imagery_product, 'image_path': image_path,
+									'result': str( result ) }
+							
 							st.session_state[ 'geo_last_latitude' ] = None
 							st.session_state[ 'geo_last_longitude' ] = None
 							st.session_state[ 'geo_last_image_path' ] = image_path
@@ -6581,74 +6212,45 @@ elif mode == 'Geological':
 						st.session_state[ 'geo_last_image_path' ] = ''
 			
 				st.divider( )
-				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source', 'Global Imagery', 'geo_global_imagery' )
-			# ------------------------------------------------------------------
-			# USGS WATER DATA
-			# ------------------------------------------------------------------
+				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source',
+					'Global Imagery', 'geo_global_imagery' )
+			
+			# --------- USGS WATER DATA
 			with st.expander( '💧 USGS Water Data', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.USGS_WATER )
-				water_mode = st.selectbox( 'Mode', options=[
-						'monitoring-locations',
-						'time-series-metadata',
-						'latest-continuous',
-						'latest-daily'
-				], key='geo_water_mode' )
+				water_mode = st.selectbox( 'Mode',
+					options=[ 'monitoring-locations', 'time-series-metadata', 'latest-continuous',
+							'latest-daily' ], key='geo_water_mode' )
 				
-				water_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='geo_water_timeout' )
+				water_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='geo_water_timeout' )
 				
-				water_limit = st.number_input(
-					'Limit',
-					min_value=1,
-					max_value=1000,
-					value=25,
-					step=1,
-					key='geo_water_limit' )
+				water_limit = st.number_input( 'Limit', min_value=1, max_value=1000, value=25,
+					step=1, key='geo_water_limit' )
 				
 				if water_mode == 'monitoring-locations':
-					water_monitoring_location_id = st.text_input(
-						'Monitoring Location ID',
-						value='',
-						help='Optional. Example: USGS-01491000',
+					water_monitoring_location_id = st.text_input( 'Monitoring Location ID',
+						value='', help='Optional. Example: USGS-01491000',
 						key='geo_water_monitoring_location_id' )
 					
-					water_state_code = st.text_input(
-						'State Code',
-						value='',
-						help='Optional state filter.',
-						key='geo_water_state_code' )
+					water_state_code = st.text_input( 'State Code', value='',
+						help='Optional state filter.', key='geo_water_state_code' )
 					
-					water_county_code = st.text_input(
-						'County Code',
-						value='',
-						help='Optional county filter.',
-						key='geo_water_county_code' )
+					water_county_code = st.text_input( 'County Code', value='',
+						help='Optional county filter.', key='geo_water_county_code' )
 					
-					water_site_type = st.text_input(
-						'Site Type',
-						value='',
-						help='Optional site type filter.',
-						key='geo_water_site_type' )
+					water_site_type = st.text_input( 'Site Type', value='',
+						help='Optional site type filter.', key='geo_water_site_type' )
 					
 					water_parameter_code = ''
 				
 				else:
-					water_monitoring_location_id = st.text_input(
-						'Monitoring Location ID',
-						value='USGS-01491000',
-						help='Example: USGS-01491000',
+					water_monitoring_location_id = st.text_input( 'Monitoring Location ID',
+						value='USGS-01491000', help='Example: USGS-01491000',
 						key='geo_water_monitoring_location_id_value' )
 					
-					water_parameter_code = st.text_input(
-						'Parameter Code',
-						value='',
-						help='Optional USGS parameter code.',
-						key='geo_water_parameter_code' )
+					water_parameter_code = st.text_input( 'Parameter Code', value='',
+						help='Optional USGS parameter code.', key='geo_water_parameter_code' )
 					
 					water_state_code = ''
 					water_county_code = ''
@@ -6691,23 +6293,15 @@ elif mode == 'Geological':
 			
 				st.divider( )
 				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source', 'USGS Water Data', 'geo_usgs_water_data' )
-			# ------------------------------------------------------------------
-			# USGS THE NATIONAL MAP
-			# ------------------------------------------------------------------
+			
+			# --------- USGS THE NATIONAL MAP
 			with st.expander( '🗺️ USGS The National Map', expanded=False ):
 				st.badge( label='About API', color='blue', help=cfg.USGS_NATIONAL_MAP )
-				tnm_mode = st.selectbox(
-					'Mode',
-					options=[ 'datasets', 'products' ],
+				tnm_mode = st.selectbox( 'Mode', options=[ 'datasets', 'products' ],
 					key='geo_tnm_mode' )
 				
-				tnm_timeout = st.number_input(
-					'Timeout',
-					min_value=1,
-					max_value=60,
-					value=20,
-					step=1,
-					key='geo_tnm_timeout' )
+				tnm_timeout = st.number_input( 'Timeout', min_value=1, max_value=60, value=20,
+					step=1, key='geo_tnm_timeout' )
 				
 				if tnm_mode == 'datasets':
 					tnm_dataset = ''
@@ -6719,70 +6313,50 @@ elif mode == 'Geological':
 					tnm_center_latitude = None
 					tnm_center_longitude = None
 					
-					st.caption(
-						'Datasets mode lists available National Map datasets and does not use '
+					st.caption( 'Datasets mode lists available National Map datasets and does not use '
 						'global coordinates.' )
 				
 				else:
-					tnm_dataset = st.text_input(
-						'Dataset',
-						value='',
-						help='Optional TNM dataset filter.',
-						key='geo_tnm_dataset' )
+					tnm_dataset = st.text_input( 'Dataset', value='',
+						help='Optional TNM dataset filter.', key='geo_tnm_dataset' )
 					
-					tnm_query = st.text_input(
-						'Search Query',
-						value='',
-						help='Optional free-text product search.',
-						key='geo_tnm_query' )
+					tnm_query = st.text_input( 'Search Query', value='',
+						help='Optional free-text product search.', key='geo_tnm_query' )
 					
-					tnm_prod_formats = st.text_input(
-						'Product Formats',
-						value='',
+					tnm_prod_formats = st.text_input( 'Product Formats', value='',
 						help='Optional format filter such as GeoTIFF, IMG, LAS, or LAZ.',
 						key='geo_tnm_prod_formats' )
 					
-					tnm_use_bbox = st.checkbox(
-						'Use Bounding Box',
-						value=False,
+					tnm_use_bbox = st.checkbox( 'Use Bounding Box', value=False,
 						key='geo_tnm_use_bbox' )
 					
 					if tnm_use_bbox:
 						st.caption(
-							'Bounding box defaults are centered on the global latitude and longitude.' )
+							'Bounding box defaults are centered on the global latitude and '
+							'longitude.' )
 						
 						tnm_box_c1, tnm_box_c2 = st.columns( 2 )
 						
 						with tnm_box_c1:
-							tnm_min_x = st.number_input(
-								'Min X / West Longitude',
-								value=float( global_box[ 'west' ] ),
-								format='%.6f',
+							tnm_min_x = st.number_input( 'Min X / West Longitude',
+								value=float( global_box[ 'west' ] ), format='%.6f',
 								key='geo_tnm_min_x' )
 							
-							tnm_min_y = st.number_input(
-								'Min Y / South Latitude',
-								value=float( global_box[ 'south' ] ),
-								format='%.6f',
+							tnm_min_y = st.number_input( 'Min Y / South Latitude',
+								value=float( global_box[ 'south' ] ), format='%.6f',
 								key='geo_tnm_min_y' )
 						
 						with tnm_box_c2:
-							tnm_max_x = st.number_input(
-								'Max X / East Longitude',
-								value=float( global_box[ 'east' ] ),
-								format='%.6f',
+							tnm_max_x = st.number_input( 'Max X / East Longitude',
+								value=float( global_box[ 'east' ] ), format='%.6f',
 								key='geo_tnm_max_x' )
 							
-							tnm_max_y = st.number_input(
-								'Max Y / North Latitude',
-								value=float( global_box[ 'north' ] ),
-								format='%.6f',
+							tnm_max_y = st.number_input( 'Max Y / North Latitude',
+								value=float( global_box[ 'north' ] ), format='%.6f',
 								key='geo_tnm_max_y' )
 						
-						tnm_bbox = (
-								f'{float( tnm_min_x )},{float( tnm_min_y )},'
-								f'{float( tnm_max_x )},{float( tnm_max_y )}'
-						)
+						tnm_bbox = (f'{float( tnm_min_x )},{float( tnm_min_y )},'
+						            f'{float( tnm_max_x )},{float( tnm_max_y )}')
 						
 						tnm_center_latitude = (float( tnm_min_y ) + float( tnm_max_y )) / 2.0
 						tnm_center_longitude = (float( tnm_min_x ) + float( tnm_max_x )) / 2.0
@@ -6792,27 +6366,17 @@ elif mode == 'Geological':
 						tnm_center_latitude = None
 						tnm_center_longitude = None
 					
-					tnm_max_items = st.number_input(
-						'Max Items',
-						min_value=1,
-						max_value=1000,
-						value=25,
-						step=1,
-						key='geo_tnm_max_items' )
+					tnm_max_items = st.number_input( 'Max Items', min_value=1, max_value=1000,
+						value=25, step=1, key='geo_tnm_max_items' )
 					
-					tnm_offset = st.number_input(
-						'Offset',
-						min_value=0,
-						max_value=100000,
-						value=0,
-						step=1,
-						key='geo_tnm_offset' )
+					tnm_offset = st.number_input( 'Offset', min_value=0, max_value=100000, value=0,
+						step=1, key='geo_tnm_offset' )
 				
 				tnm_btn_c1, tnm_btn_c2 = st.columns( 2 )
-				
 				with tnm_btn_c1:
 					if st.button( label='Run', icon='🏃', key='geo_tnm_run',
 							use_container_width=True ):
+						
 						try:
 							service = USGSTheNationalMap( )
 							
@@ -6849,8 +6413,13 @@ elif mode == 'Geological':
 		
 				st.divider( )
 				render_source_processing_controls( 'geo', 'geo_last_result', 'geo_last_source', 'USGS The National Map', 'geo_usgs_the_national_map' )
+		
 		with geo_c2:
 			render_mode_document_tabs( 'geo', '📄 Loaded' )
+			
+# ==============================================================================
+# DATA UPLOAD
+# ==============================================================================
 elif mode == 'Data Upload':
 	left, center, right = st.columns( [ 0.05, 0.90, 0.05 ] )
 	with center:
@@ -6861,23 +6430,23 @@ elif mode == 'Data Upload':
 			key='data_upload_file' )
 		
 		enrichment_mode = st.selectbox( 'Enrichment Mode',
-			options=[ 'City / State / Country', 'Address Column' ], key='data_upload_enrichment_mode' )
+			options=['City / State / Country', 'Address Column'], key='data_upload_enrichment_mode')
 		
 		if enrichment_mode == 'City / State / Country':
 			city_col = st.text_input( 'City Column', value='City', key='data_upload_city_col' )
 			state_col = st.text_input( 'State Column', value='State', key='data_upload_state_col' )
 			country_col = st.text_input( 'Country Column', value='Country',
 				key='data_upload_country_col' )
+			
 			address_col = ''
 		
 		else:
 			address_col = st.text_input( 'Address Column', value='Address',
 				key='data_upload_address_col' )
-			country_col = st.text_input(
-				'Country Bias Column',
-				value='Country',
+			country_col = st.text_input( 'Country Bias Column', value='Country',
 				help='Optional. Leave as-is if the uploaded file has no country-bias column.',
 				key='data_upload_address_country_col' )
+			
 			city_col = ''
 			state_col = ''
 		
@@ -6918,11 +6487,8 @@ elif mode == 'Data Upload':
 					with open( output_path, 'rb' ) as f:
 						output_bytes = f.read( )
 					
-					st.download_button(
-						'Download Enriched File',
-						data=output_bytes,
-						file_name=Path( output_path ).name,
-						key='data_upload_download' )
+					st.download_button( 'Download Enriched File', data=output_bytes,
+						file_name=Path( output_path ).name, key='data_upload_download' )
 				
 				except Exception as e:
 					st.error( f'Enrichment failed: {e}' )

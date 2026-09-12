@@ -1,6 +1,6 @@
 '''
   ******************************************************************************************
-      Assembly:                ayin
+      Assembly:                iyr
       Filename:                config.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
@@ -54,7 +54,7 @@ DB_PATH = 'stores/sqlite/data.db'
 DEFAULT_DATA = r'Reports'
 BASE_DIR = Path( __file__ ).resolve( ).parent
 FAVICON = r'resources/images/favicon.ico'
-LOGO = r'resources/images/iyrin_logo.png'
+LOGO = r'resources/images/iyrin-logo.png'
 MAP_ID = r'16b56ad08af295ded24d8eb2'
 MAP_NAME = r'uap-static'
 DATASET_ID = r'5adda1cd-f412-4ed5-874d-e97664f229b4'
