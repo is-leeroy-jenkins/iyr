@@ -29,17 +29,12 @@ from embedders import EmbeddingFactory
 from fetchers import WebFetcher
 from stores.vector import ChromaStore, PineconeStore
 
-
 EMBEDDING_MODELS: Dict[ str, List[ str ] ] = {
-	'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large' ],
-	'Google Generative AI': [ 'gemini-embedding-2-preview' ],
-	'Mistral AI': [ 'mistral-embed' ],
-	'Hugging Face': [
-		'sentence-transformers/all-MiniLM-L6-v2',
-		'sentence-transformers/all-mpnet-base-v2' ],
-	'Local GGUF': [ 'Local GGUF' ],
-}
-
+		'OpenAI': [ 'text-embedding-3-small', 'text-embedding-3-large' ],
+		'Google Generative AI': [ 'gemini-embedding-2-preview' ], 'Mistral AI': [
+				'mistral-embed' ],
+		'Hugging Face': [ 'sentence-transformers/all-MiniLM-L6-v2',
+				'sentence-transformers/all-mpnet-base-v2' ], 'Local GGUF': [ 'Local GGUF' ], }
 
 def throw_if( name: str, value: object ) -> None:
 	"""Validate a required runtime value."""
@@ -50,13 +45,11 @@ def throw_if( name: str, value: object ) -> None:
 	if isinstance( value, ( list, tuple, dict, set ) ) and len( value ) == 0:
 		raise ValueError( f'Argument "{name}" cannot be empty!' )
 
-
 def render_processing_inputs( key_prefix: str, collection_name: str ) -> Dict[ str, object ]:
 	"""Render Foo-style chunking, embedding, and vector-storage controls."""
 	throw_if( 'key_prefix', key_prefix )
 	throw_if( 'collection_name', collection_name )
-
-	chunk_col, overlap_col = st.columns( 2 )
+	chunk_col, overlap_col = st.columns( 2, border=True, gap='xxsmall' )
 	with chunk_col:
 		chunk_size = st.slider( 'Chunk Size', min_value=100, max_value=4000, value=1000,
 			step=100, key=f'{key_prefix}_chunk_size' )
@@ -101,19 +94,11 @@ def render_processing_inputs( key_prefix: str, collection_name: str ) -> Dict[ s
 		persist_directory = ''
 		namespace = st.text_input( 'Namespace', value='',
 			key=f'{key_prefix}_pinecone_namespace' )
-
-	return {
-		'chunk_size': int( chunk_size ),
-		'chunk_overlap': int( chunk_overlap ),
-		'provider': provider,
-		'model': model,
-		'model_path': model_path,
-		'vector_backend': vector_backend,
-		'vector_target': vector_target,
-		'persist_directory': persist_directory,
-		'namespace': namespace,
-	}
-
+	
+	return { 'chunk_size': int( chunk_size ), 'chunk_overlap': int( chunk_overlap ),
+			'provider': provider, 'model': model, 'model_path': model_path,
+			'vector_backend': vector_backend, 'vector_target': vector_target,
+			'persist_directory': persist_directory, 'namespace': namespace, }
 
 def chunk_documents( documents: List[ Document ], chunk_size: int,
 	chunk_overlap: int ) -> List[ Document ]:
@@ -129,7 +114,6 @@ def chunk_documents( documents: List[ Document ], chunk_size: int,
 		document.metadata = dict( document.metadata or { } )
 		document.metadata[ 'chunk_id' ] = f'chunk-{index:06d}'
 	return chunks
-
 
 def create_embeddings( chunks: List[ Document ], provider: str, model: str,
 	model_path: str ) -> tuple[ object, List[ List[ float ] ] ]:
@@ -147,7 +131,6 @@ def create_embeddings( chunks: List[ Document ], provider: str, model: str,
 		raise RuntimeError( 'Embedding vectors contain non-finite values.' )
 	return embedder, vectors
 
-
 def store_documents( chunks: List[ Document ], embedder: object, vector_backend: str,
 	vector_target: str, persist_directory: str, namespace: str ) -> object:
 	"""Persist document chunks to Chroma or Pinecone."""
@@ -162,7 +145,6 @@ def store_documents( chunks: List[ Document ], embedder: object, vector_backend:
 	api_key = getattr( cfg, 'PINECONE_API_KEY', '' ) or os.getenv( 'PINECONE_API_KEY', '' )
 	store = PineconeStore( )
 	return store.create( chunks, embedder, vector_target, namespace, api_key )
-
 
 def initialize_mode_document_state( prefix: str ) -> None:
 	"""Initialize isolated document state for one API mode."""
@@ -184,7 +166,6 @@ def initialize_mode_document_state( prefix: str ) -> None:
 		if key not in st.session_state:
 			st.session_state[ key ] = value
 
-
 def serialize_mode_result( result: object ) -> str:
 	"""Serialize a structured API result as LangChain document text."""
 	if isinstance( result, pd.DataFrame ):
@@ -192,7 +173,6 @@ def serialize_mode_result( result: object ) -> str:
 	if isinstance( result, str ):
 		return result
 	return json.dumps( result, indent=2, sort_keys=True, default=str )
-
 
 def sync_mode_document( prefix: str, result_key: str, source_key: str ) -> None:
 	"""Synchronize the latest API result into a LangChain Document."""
@@ -214,7 +194,6 @@ def sync_mode_document( prefix: str, result_key: str, source_key: str ) -> None:
 	st.session_state[ f'{prefix}_embedder' ] = None
 	st.session_state[ f'{prefix}_vector_store' ] = None
 	st.session_state[ f'{prefix}_document_signature' ] = signature
-
 
 def render_source_processing_controls( prefix: str, result_key: str, source_key: str,
 	source_name: str, key_prefix: str ) -> None:
@@ -300,12 +279,11 @@ def render_source_processing_controls( prefix: str, result_key: str, source_key:
 			except Exception as exc:
 				st.error( str( exc ) )
 
-
 def render_mode_document_tabs( prefix: str, loaded_label: str = '📄 Loaded' ) -> None:
 	"""Render Loaded, Chunks, and Embeddings tabs for one API mode."""
 	initialize_mode_document_state( prefix )
 	loaded_tab, chunks_tab, embeddings_tab = st.tabs(
-		[ loaded_label, '✂️ Chunks', '🧠 Embeddings' ] )
+		[ loaded_label, '✂️ Chunks', '🔢 Embeddings' ] )
 
 	with loaded_tab:
 		documents = st.session_state[ f'{prefix}_documents' ]
@@ -319,7 +297,7 @@ def render_mode_document_tabs( prefix: str, loaded_label: str = '📄 Loaded' ) 
 				'Metadata': document.metadata or { },
 				'Text': document.page_content,
 			} for index, document in enumerate( documents, start=1 ) ]
-			st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+			st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 
 	with chunks_tab:
 		chunks = st.session_state[ f'{prefix}_chunks' ]
@@ -333,7 +311,7 @@ def render_mode_document_tabs( prefix: str, loaded_label: str = '📄 Loaded' ) 
 				'Characters': len( document.page_content ),
 				'Text': document.page_content,
 			} for index, document in enumerate( chunks, start=1 ) ]
-			st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+			st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 
 	with embeddings_tab:
 		vectors = st.session_state[ f'{prefix}_embeddings' ]
@@ -354,28 +332,18 @@ def render_mode_document_tabs( prefix: str, loaded_label: str = '📄 Loaded' ) 
 					'Text': document.page_content,
 					'Vector': vector,
 				} )
-			st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
-
+			st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 
 def initialize_web_state( ) -> None:
 	"""Initialize isolated web-document state."""
-	defaults = {
-		'web_documents': [ ],
-		'web_document_url': '',
-		'web_chunks': [ ],
-		'web_embeddings': [ ],
-		'web_embedder': None,
-		'web_vector_store': None,
-		'web_chunk_size_used': 0,
-		'web_chunk_overlap_used': 0,
-		'web_embedding_provider_used': '',
-		'web_embedding_model_used': '',
-		'web_embedding_model_path_used': '',
-	}
+	defaults = { 'web_documents': [ ], 'web_document_url': '', 'web_chunks': [ ],
+			'web_embeddings': [ ], 'web_embedder': None, 'web_vector_store': None,
+			'web_chunk_size_used': 0, 'web_chunk_overlap_used': 0,
+			'web_embedding_provider_used': '', 'web_embedding_model_used': '',
+			'web_embedding_model_path_used': '', }
 	for key, value in defaults.items( ):
 		if key not in st.session_state:
 			st.session_state[ key ] = value
-
 
 def clear_web_state( ) -> None:
 	"""Clear scraped documents and all derived web state."""
@@ -391,7 +359,6 @@ def clear_web_state( ) -> None:
 	st.session_state[ 'web_embedding_provider_used' ] = ''
 	st.session_state[ 'web_embedding_model_used' ] = ''
 	st.session_state[ 'web_embedding_model_path_used' ] = ''
-
 
 def render_web_document_processing( ) -> None:
 	"""Render Foo-style Site Crawler document processing."""
@@ -436,7 +403,7 @@ def render_web_document_processing( ) -> None:
 			chunk_col, embed_col, store_col = st.columns( 3 )
 			chunk_run = chunk_col.button( 'Chunk', icon='✂️', key='web_chunk_run',
 				use_container_width=True )
-			embed_run = embed_col.button( 'Embed', icon='🧬', key='web_embed_run',
+			embed_run = embed_col.button( 'Embed', icon='🔢', key='web_embed_run',
 				use_container_width=True )
 			store_run = store_col.button( 'Store', icon='🗄️', key='web_store_run',
 				use_container_width=True )
@@ -499,7 +466,7 @@ def render_web_document_processing( ) -> None:
 
 	with right:
 		loaded_tab, chunks_tab, embeddings_tab = st.tabs(
-			[ '🌐 Scraped', '✂️ Chunks', '🧠 Embeddings' ] )
+			[ '🌐 Scraped', '✂️ Chunks', '🔢 Embeddings' ] )
 		with loaded_tab:
 			documents = st.session_state[ 'web_documents' ]
 			if not documents:
@@ -512,7 +479,7 @@ def render_web_document_processing( ) -> None:
 					'Metadata': document.metadata or { },
 					'Text': document.page_content,
 				} for index, document in enumerate( documents, start=1 ) ]
-				st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+				st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 		with chunks_tab:
 			chunks = st.session_state[ 'web_chunks' ]
 			if not chunks:
@@ -525,7 +492,7 @@ def render_web_document_processing( ) -> None:
 					'Characters': len( document.page_content ),
 					'Text': document.page_content,
 				} for index, document in enumerate( chunks, start=1 ) ]
-				st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+				st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
 		with embeddings_tab:
 			vectors = st.session_state[ 'web_embeddings' ]
 			chunks = st.session_state[ 'web_chunks' ]
@@ -545,4 +512,4 @@ def render_web_document_processing( ) -> None:
 						'Text': document.page_content,
 						'Vector': vector,
 					} )
-				st.dataframe( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
+				st.data_editor( pd.DataFrame( rows ), use_container_width=True, hide_index=True )
