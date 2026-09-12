@@ -46,14 +46,14 @@ text_files = [
 for path in text_files:
     text = path.read_text( encoding='utf-8' )
     updated = text
-    updated = updated.replace( 'from live_world import ', 'from world import ' )
-    updated = updated.replace( 'from live_world_history import ', 'from history import ' )
-    updated = updated.replace( 'from live_world_sources import ', 'from sources import ' )
-    updated = updated.replace( 'from live_world_agent_tools import ', 'from tools import ' )
-    updated = updated.replace( 'Filename:                live_world.py', 'Filename:                world.py' )
-    updated = updated.replace( 'Filename:                live_world_history.py', 'Filename:                history.py' )
-    updated = updated.replace( 'Filename:                live_world_sources.py', 'Filename:                sources.py' )
-    updated = updated.replace( 'Filename:                live_world_agent_tools.py', 'Filename:                tools.py' )
+    updated = updated.replace( 'from world import ', 'from world import ' )
+    updated = updated.replace( 'from history import ', 'from history import ' )
+    updated = updated.replace( 'from sources import ', 'from sources import ' )
+    updated = updated.replace( 'from tools import ', 'from tools import ' )
+    updated = updated.replace( 'Filename:                world.py', 'Filename:                world.py' )
+    updated = updated.replace( 'Filename:                history.py', 'Filename:                history.py' )
+    updated = updated.replace( 'Filename:                sources.py', 'Filename:                sources.py' )
+    updated = updated.replace( 'Filename:                tools.py', 'Filename:                tools.py' )
     if updated != text:
         path.write_text( updated, encoding='utf-8' )
 
@@ -63,7 +63,7 @@ for path in text_files:
 # ==============================================================================
 sources_path = Path( 'sources.py' )
 sources = sources_path.read_text( encoding='utf-8' )
-provider = r'''
+provider = r"""
 
 class OverpassCameras:
 	'''
@@ -207,7 +207,7 @@ class OverpassCameras:
 		if tags.get( 'man_made' ) == 'surveillance' or tags.get( 'surveillance:type' ) == 'camera':
 			return 'CCTV / Surveillance'
 		return ''
-'''
+"""
 if 'class OverpassCameras:' in sources:
     raise RuntimeError( 'OverpassCameras already exists.' )
 sources = sources.rstrip( ) + provider + '\n'
@@ -317,7 +317,7 @@ new_additional = """\t\twith st.expander( 'Additional Layers', expanded=False ):
 """
 world = replace_once( world, old_additional, new_additional, 'camera sidebar controls' )
 
-camera_function = r'''
+camera_function = r"""
 
 def fetch_live_cameras( latitude: float, longitude: float ) -> pd.DataFrame:
 	'''
@@ -399,7 +399,7 @@ def fetch_live_cameras( latitude: float, longitude: float ) -> pd.DataFrame:
 
 	st.session_state[ 'live_world_camera_result' ] = result
 	return entities_to_dataframe( entities )
-'''
+"""
 world = replace_once(
     world,
     "\tst.session_state[ 'live_world_infrastructure_result' ] = result\n\treturn entities_to_dataframe( entities )\n\n\ndef get_row_value",
@@ -552,8 +552,8 @@ for path in [ Path( 'world.py' ), Path( 'history.py' ), Path( 'sources.py' ), Pa
 
 for path in [ Path( 'app.py' ), Path( 'world.py' ), Path( 'history.py' ), Path( 'sources.py' ), Path( 'tools.py' ) ]:
     text = path.read_text( encoding='utf-8' )
-    for old_name in [ 'from live_world import ', 'from live_world_history import ',
-            'from live_world_sources import ', 'from live_world_agent_tools import ' ]:
+    for old_name in [ 'from world import ', 'from history import ',
+            'from sources import ', 'from tools import ' ]:
         if old_name in text:
             raise RuntimeError( f'Stale module import in {path}: {old_name}' )
 
