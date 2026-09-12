@@ -12,8 +12,9 @@
 Purpose:
     Live World Data functionality inspired by God's Eye View while preserving Iyr's
     existing GIS modes and execution paths. The module provides isolated sidebar state,
-    live USGS earthquake and NASA FIRMS fire retrieval, normalized geospatial entities,
-    operational PyDeck rendering, refresh controls, filtering, and source-data inspection.
+    live aircraft, satellite, earthquake, and active-fire retrieval, normalized geospatial
+    entities, operational PyDeck rendering, refresh controls, filtering, and source-data
+    inspection.
 ******************************************************************************************
 '''
 
@@ -29,18 +30,19 @@ import pydeck as pdk
 import streamlit as st
 
 from fetchers import Firms, USGSEarthquakes
+from live_world_sources import CelesTrakLive, OpenSkyLive
 
 
 LIVE_WORLD_LAYERS: Dict[ str, str ] = {
+	'aircraft': '✈️ Aircraft (Live)',
+	'satellites': '🛰️ Satellites',
 	'earthquakes': '📈 Earthquakes',
 	'fires': '🔥 Fires (Wildfires)',
 }
 
 LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
-	'aircraft': '✈️ Aircraft (Live)',
 	'military_aircraft': '🛩️ Military Aircraft',
 	'vessels': '🚢 Vessels & Ships',
-	'satellites': '🛰️ Satellites',
 	'cameras': '📷 CCTV / Web Cameras',
 	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
 	'tracking': '🎯 Tracking & Trails',
@@ -123,10 +125,6 @@ def initialize_live_world_state( ) -> None:
 		--------
 		Initialize isolated Live World Data state without modifying Iyr's existing mode state.
 
-		Parameters:
-		-----------
-		None
-
 		Returns:
 		--------
 		None
@@ -134,10 +132,16 @@ def initialize_live_world_state( ) -> None:
 	'''
 	defaults: Dict[ str, object ] = {
 		'live_world_enabled': False,
+		'live_world_aircraft': False,
+		'live_world_aircraft_radius': 2.0,
+		'live_world_aircraft_airborne_only': True,
+		'live_world_satellites': False,
+		'live_world_satellite_group': 'stations',
+		'live_world_satellite_limit': 100,
 		'live_world_earthquakes': False,
-		'live_world_fires': False,
 		'live_world_earthquake_feed': 'all_day.geojson',
 		'live_world_earthquake_min_magnitude': 1.0,
+		'live_world_fires': False,
 		'live_world_firms_source': 'VIIRS_SNPP_NRT',
 		'live_world_firms_day_range': 1,
 		'live_world_firms_area_mode': 'Local Bounding Box',
@@ -145,8 +149,12 @@ def initialize_live_world_state( ) -> None:
 		'live_world_last_refresh': '',
 		'live_world_last_error': '',
 		'live_world_df_entities': pd.DataFrame( ),
+		'live_world_df_aircraft': pd.DataFrame( ),
+		'live_world_df_satellites': pd.DataFrame( ),
 		'live_world_df_earthquakes': pd.DataFrame( ),
 		'live_world_df_fires': pd.DataFrame( ),
+		'live_world_aircraft_result': { },
+		'live_world_satellite_result': [ ],
 		'live_world_earthquake_result': { },
 		'live_world_firms_result': { },
 		'live_world_map_style': 'Carto Dark Matter',
@@ -164,7 +172,7 @@ def get_live_world_layers( ) -> Dict[ str, bool ]:
 
 		Purpose:
 		--------
-		Return the enabled state of implemented Live World Data layers.
+		Return the enabled state of every implemented Live World Data layer.
 
 		Returns:
 		--------
@@ -183,8 +191,8 @@ def render_live_world_sidebar( ) -> None:
 
 		Purpose:
 		--------
-		Render Live World Data controls in an isolated sidebar expander below Iyr's Mode
-		expander. Active controls correspond to implemented operational layers.
+		Render operational Live World Data controls in an isolated sidebar expander below
+		Iyr's existing Mode expander.
 
 		Returns:
 		--------
@@ -198,6 +206,21 @@ def render_live_world_sidebar( ) -> None:
 		st.divider( )
 		st.caption( 'Live Layers' )
 
+		st.checkbox( LIVE_WORLD_LAYERS[ 'aircraft' ], key='live_world_aircraft' )
+		if st.session_state[ 'live_world_aircraft' ]:
+			st.slider( 'Aircraft Radius (Degrees)', min_value=0.25, max_value=10.0,
+				step=0.25, key='live_world_aircraft_radius' )
+			st.checkbox( 'Airborne Only', key='live_world_aircraft_airborne_only' )
+			st.caption( 'OpenSky API Client credentials are used when configured.' )
+
+		st.checkbox( LIVE_WORLD_LAYERS[ 'satellites' ], key='live_world_satellites' )
+		if st.session_state[ 'live_world_satellites' ]:
+			st.selectbox( 'Satellite Group',
+				options=[ 'stations', 'visual', 'weather', 'gps-ops', 'active' ],
+				key='live_world_satellite_group' )
+			st.slider( 'Satellite Limit', min_value=10, max_value=500, step=10,
+				key='live_world_satellite_limit' )
+
 		st.checkbox( LIVE_WORLD_LAYERS[ 'earthquakes' ], key='live_world_earthquakes' )
 		if st.session_state[ 'live_world_earthquakes' ]:
 			st.selectbox(
@@ -208,21 +231,17 @@ def render_live_world_sidebar( ) -> None:
 					'4.5_week.geojson', 'significant_day.geojson',
 					'significant_week.geojson' ],
 				key='live_world_earthquake_feed' )
-
 			st.slider( 'Minimum Magnitude', min_value=0.0, max_value=10.0,
 				step=0.1, key='live_world_earthquake_min_magnitude' )
 
 		st.checkbox( LIVE_WORLD_LAYERS[ 'fires' ], key='live_world_fires' )
 		if st.session_state[ 'live_world_fires' ]:
-			st.selectbox(
-				'FIRMS Source',
+			st.selectbox( 'FIRMS Source',
 				options=[ 'VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT',
 					'MODIS_NRT', 'LANDSAT_NRT' ],
 				key='live_world_firms_source' )
-
 			st.slider( 'Fire Day Range', min_value=1, max_value=5, step=1,
 				key='live_world_firms_day_range' )
-
 			st.selectbox( 'Fire Area', options=[ 'Local Bounding Box', 'World' ],
 				key='live_world_firms_area_mode' )
 
@@ -237,7 +256,7 @@ def render_live_world_sidebar( ) -> None:
 				clear_live_world_data( )
 
 		with st.expander( 'Additional Layers', expanded=False ):
-			st.caption( 'Planned layers are enabled as their provider implementations are completed.' )
+			st.caption( 'Layers activate as their provider implementations are completed.' )
 			for label in LIVE_WORLD_PENDING_LAYERS.values( ):
 				st.checkbox( label, value=False, disabled=True )
 
@@ -261,8 +280,12 @@ def clear_live_world_data( ) -> None:
 	'''
 	initialize_live_world_state( )
 	st.session_state[ 'live_world_df_entities' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_earthquakes' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_aircraft_result' ] = { }
+	st.session_state[ 'live_world_satellite_result' ] = [ ]
 	st.session_state[ 'live_world_earthquake_result' ] = { }
 	st.session_state[ 'live_world_firms_result' ] = { }
 	st.session_state[ 'live_world_last_refresh' ] = ''
@@ -296,6 +319,162 @@ def create_live_world_bounding_box( latitude: float, longitude: float,
 	east = min( 180.0, float( longitude ) + float( delta ) )
 	north = min( 90.0, float( latitude ) + float( delta ) )
 	return f'{west:.6f},{south:.6f},{east:.6f},{north:.6f}'
+
+
+def fetch_live_aircraft( latitude: float, longitude: float ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Retrieve current OpenSky aircraft state vectors around the Iyr/global location and
+		normalize positioned aircraft for Live World rendering.
+
+		Parameters:
+		-----------
+		latitude (float): Geographic center latitude.
+		longitude (float): Geographic center longitude.
+
+		Returns:
+		--------
+		pd.DataFrame: Normalized aircraft entities.
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	client_id = str( st.session_state.get( 'opensky_api_client_id', '' ) or '' )
+	client_secret = str( st.session_state.get( 'opensky_api_credentials', '' ) or '' )
+	radius = float( st.session_state[ 'live_world_aircraft_radius' ] )
+	airborne_only = bool( st.session_state[ 'live_world_aircraft_airborne_only' ] )
+	service = OpenSkyLive( client_id=client_id, client_secret=client_secret, timeout=20 )
+	result = service.fetch_states( latitude=latitude, longitude=longitude,
+		radius_degrees=radius ) or { }
+	states = result.get( 'states', [ ] ) or [ ]
+	entities: List[ GeoEntity ] = [ ]
+
+	for state in states:
+		if not isinstance( state, list ) or len( state ) < 17:
+			continue
+
+		icao24 = str( state[ 0 ] or '' ).strip( )
+		callsign = str( state[ 1 ] or '' ).strip( )
+		longitude_value = state[ 5 ]
+		latitude_value = state[ 6 ]
+		if latitude_value is None or longitude_value is None:
+			continue
+
+		on_ground = bool( state[ 8 ] )
+		if airborne_only and on_ground:
+			continue
+
+		try:
+			lat = float( latitude_value )
+			lon = float( longitude_value )
+		except ( TypeError, ValueError ):
+			continue
+
+		geo_altitude = state[ 13 ] if len( state ) > 13 else None
+		baro_altitude = state[ 7 ] if len( state ) > 7 else None
+		altitude = geo_altitude if geo_altitude is not None else baro_altitude
+		try:
+			altitude_value = float( altitude ) if altitude is not None else 0.0
+		except ( TypeError, ValueError ):
+			altitude_value = 0.0
+
+		velocity = state[ 9 ] if len( state ) > 9 else None
+		heading = state[ 10 ] if len( state ) > 10 else None
+		try:
+			velocity_value = float( velocity ) if velocity is not None else 0.0
+		except ( TypeError, ValueError ):
+			velocity_value = 0.0
+		try:
+			heading_value = float( heading ) if heading is not None else 0.0
+		except ( TypeError, ValueError ):
+			heading_value = 0.0
+
+		metadata = {
+			'ICAO24': icao24,
+			'Callsign': callsign,
+			'Origin Country': state[ 2 ],
+			'Time Position': state[ 3 ],
+			'Last Contact': state[ 4 ],
+			'Barometric Altitude': baro_altitude,
+			'Geometric Altitude': geo_altitude,
+			'Vertical Rate': state[ 11 ] if len( state ) > 11 else None,
+			'On Ground': on_ground,
+			'Squawk': state[ 14 ] if len( state ) > 14 else None,
+			'SPI': state[ 15 ] if len( state ) > 15 else None,
+			'Position Source': state[ 16 ] if len( state ) > 16 else None,
+			'Category': state[ 17 ] if len( state ) > 17 else None,
+		}
+		entities.append( GeoEntity(
+			entity_id=icao24 or f'OPENSKY-{len( entities ) + 1}',
+			entity_type='Aircraft',
+			name=callsign or icao24,
+			latitude=lat,
+			longitude=lon,
+			altitude=altitude_value,
+			heading=heading_value,
+			speed=velocity_value,
+			timestamp=str( state[ 4 ] or '' ),
+			source='OpenSky Network',
+			metadata=metadata ) )
+
+	st.session_state[ 'live_world_aircraft_result' ] = result
+	return entities_to_dataframe( entities )
+
+
+def fetch_live_satellites( ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Retrieve current CelesTrak OMM records, propagate each orbit to the current UTC time,
+		and normalize successfully propagated satellites for Live World rendering.
+
+		Returns:
+		--------
+		pd.DataFrame: Normalized satellite entities.
+
+	'''
+	initialize_live_world_state( )
+	group = str( st.session_state[ 'live_world_satellite_group' ] )
+	limit = int( st.session_state[ 'live_world_satellite_limit' ] )
+	service = CelesTrakLive( timeout=20 )
+	records = service.fetch_group( group=group, limit=limit )
+	when = dt.datetime.now( dt.timezone.utc )
+	entities: List[ GeoEntity ] = [ ]
+
+	for record in records:
+		try:
+			position = service.propagate( record=record, when=when )
+		except Exception:
+			continue
+
+		catalog_number = str( position.get( 'CatalogNumber', '' ) or '' )
+		name = str( position.get( 'Name', '' ) or catalog_number )
+		metadata = {
+			'Catalog Number': catalog_number,
+			'Object ID': position.get( 'ObjectId', '' ),
+			'Epoch': position.get( 'Epoch', '' ),
+			'Classification': position.get( 'Classification', '' ),
+			'Group': group,
+		}
+		entities.append( GeoEntity(
+			entity_id=catalog_number or name,
+			entity_type='Satellite',
+			name=name,
+			latitude=float( position[ 'Latitude' ] ),
+			longitude=float( position[ 'Longitude' ] ),
+			altitude=float( position[ 'Altitude' ] ),
+			heading=0.0,
+			speed=float( position[ 'Velocity' ] ),
+			timestamp=when.isoformat( ),
+			source='CelesTrak',
+			metadata=metadata ) )
+
+	st.session_state[ 'live_world_satellite_result' ] = records
+	return entities_to_dataframe( entities )
 
 
 def fetch_live_earthquakes( ) -> pd.DataFrame:
@@ -353,7 +532,6 @@ def fetch_live_earthquakes( ) -> pd.DataFrame:
 			'Event Type': row.get( 'Event Type', '' ),
 			'URL': row.get( 'URL', '' ),
 		}
-
 		entities.append( GeoEntity(
 			entity_id=entity_id,
 			entity_type='Earthquake',
@@ -420,8 +598,10 @@ def fetch_live_fires( latitude: float, longitude: float ) -> pd.DataFrame:
 		except ( TypeError, ValueError ):
 			continue
 
-		acq_date = str( get_row_value( row, [ 'acq_date', 'Acq Date', 'Acquisition Date' ] ) or '' )
-		acq_time = str( get_row_value( row, [ 'acq_time', 'Acq Time', 'Acquisition Time' ] ) or '' )
+		acq_date = str( get_row_value( row,
+			[ 'acq_date', 'Acq Date', 'Acquisition Date' ] ) or '' )
+		acq_time = str( get_row_value( row,
+			[ 'acq_time', 'Acq Time', 'Acquisition Time' ] ) or '' )
 		satellite = str( get_row_value( row, [ 'satellite', 'Satellite' ] ) or source )
 		metadata = {
 			'Satellite': satellite,
@@ -434,7 +614,6 @@ def fetch_live_fires( latitude: float, longitude: float ) -> pd.DataFrame:
 			'Version': get_row_value( row, [ 'version', 'Version' ] ),
 		}
 		entity_id = f'FIRMS-{source}-{acq_date}-{acq_time}-{index + 1}'
-
 		entities.append( GeoEntity(
 			entity_id=entity_id,
 			entity_type='Fire',
@@ -457,7 +636,7 @@ def get_row_value( row: Dict[ str, Any ], keys: List[ str ] ) -> object:
 
 		Purpose:
 		--------
-		Read the first available value from the explicit list of known provider keys.
+		Read the first available value from an explicit list of known provider keys.
 
 		Parameters:
 		-----------
@@ -541,6 +720,22 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 	st.session_state[ 'live_world_last_error' ] = ''
 
 	try:
+		if st.session_state[ 'live_world_aircraft' ]:
+			df_aircraft = fetch_live_aircraft( latitude, longitude )
+			st.session_state[ 'live_world_df_aircraft' ] = df_aircraft
+			if not df_aircraft.empty:
+				frames.append( df_aircraft )
+		else:
+			st.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+
+		if st.session_state[ 'live_world_satellites' ]:
+			df_satellites = fetch_live_satellites( )
+			st.session_state[ 'live_world_df_satellites' ] = df_satellites
+			if not df_satellites.empty:
+				frames.append( df_satellites )
+		else:
+			st.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
+
 		if st.session_state[ 'live_world_earthquakes' ]:
 			df_earthquakes = fetch_live_earthquakes( )
 			st.session_state[ 'live_world_df_earthquakes' ] = df_earthquakes
@@ -557,7 +752,8 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 		else:
 			st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
 
-		df_entities = pd.concat( frames, ignore_index=True ) if frames else entities_to_dataframe( [ ] )
+		df_entities = pd.concat( frames,
+			ignore_index=True ) if frames else entities_to_dataframe( [ ] )
 		st.session_state[ 'live_world_df_entities' ] = df_entities
 		st.session_state[ 'live_world_last_refresh' ] = dt.datetime.now( ).strftime(
 			'%Y-%m-%d %H:%M:%S' )
@@ -623,18 +819,25 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		return
 
 	last_refresh = str( st.session_state.get( 'live_world_last_refresh', '' ) or 'Not refreshed' )
-	metric_c1, metric_c2, metric_c3, metric_c4 = st.columns( 4, border=True )
+	metric_c1, metric_c2, metric_c3, metric_c4, metric_c5 = st.columns( 5, border=True )
 	metric_c1.metric( 'Entities', f'{len( df_map ):,}' )
-	metric_c2.metric( 'Earthquakes',
+	metric_c2.metric( 'Aircraft',
+		f'{int( (df_map[ "EntityType" ] == "Aircraft").sum( ) ):,}' )
+	metric_c3.metric( 'Satellites',
+		f'{int( (df_map[ "EntityType" ] == "Satellite").sum( ) ):,}' )
+	metric_c4.metric( 'Earthquakes',
 		f'{int( (df_map[ "EntityType" ] == "Earthquake").sum( ) ):,}' )
-	metric_c3.metric( 'Fires', f'{int( (df_map[ "EntityType" ] == "Fire").sum( ) ):,}' )
-	metric_c4.metric( 'Last Refresh', last_refresh )
+	metric_c5.metric( 'Fires', f'{int( (df_map[ "EntityType" ] == "Fire").sum( ) ):,}' )
+	st.caption( f'Last refresh: {last_refresh}' )
 
 	map_style_options = {
 		'Carto Dark Matter': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 		'Carto Positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
 		'Carto Voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-		'Dark': 'dark', 'Light': 'light', 'Road': 'road', 'Satellite': 'satellite',
+		'Dark': 'dark',
+		'Light': 'light',
+		'Road': 'road',
+		'Satellite': 'satellite',
 	}
 	control_c1, control_c2, control_c3 = st.columns( 3, border=True )
 	with control_c1:
@@ -648,8 +851,28 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 
 	layers: List[ pdk.Layer ] = [ ]
 	point_scale = float( st.session_state[ 'live_world_point_scale' ] )
+	df_aircraft = df_map[ df_map[ 'EntityType' ] == 'Aircraft' ].copy( )
+	df_satellites = df_map[ df_map[ 'EntityType' ] == 'Satellite' ].copy( )
 	df_earthquakes = df_map[ df_map[ 'EntityType' ] == 'Earthquake' ].copy( )
 	df_fires = df_map[ df_map[ 'EntityType' ] == 'Fire' ].copy( )
+
+	if not df_aircraft.empty:
+		df_aircraft[ 'Radius' ] = 7000.0 * point_scale
+		layers.append( pdk.Layer(
+			'ScatterplotLayer', data=df_aircraft,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 0, 170, 255, 220 ], get_line_color=[ 220, 245, 255, 240 ],
+			line_width_min_pixels=1, radius_min_pixels=5, radius_max_pixels=26,
+			filled=True, stroked=True, pickable=True ) )
+
+	if not df_satellites.empty:
+		df_satellites[ 'Radius' ] = 8500.0 * point_scale
+		layers.append( pdk.Layer(
+			'ScatterplotLayer', data=df_satellites,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 180, 120, 255, 220 ], get_line_color=[ 245, 235, 255, 240 ],
+			line_width_min_pixels=1, radius_min_pixels=5, radius_max_pixels=28,
+			filled=True, stroked=True, pickable=True ) )
 
 	if not df_earthquakes.empty:
 		df_earthquakes[ 'Magnitude' ] = df_earthquakes[ 'Metadata' ].map(
@@ -685,19 +908,44 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			'<b>{EntityType}</b><br/><b>{Name}</b><br/>'
 			'<b>Source:</b> {Source}<br/><b>Time:</b> {Timestamp}<br/>'
 			'<b>Coordinates:</b> {Latitude}, {Longitude}<br/>'
+			'<b>Altitude / Depth:</b> {Altitude}<br/>'
+			'<b>Speed:</b> {Speed}<br/><b>Heading:</b> {Heading}<br/>'
 			'<b>Metadata:</b> {MetadataText}' ),
-		'style': { 'backgroundColor': 'rgba(0, 0, 0, 0.88)', 'color': 'white',
-			'fontSize': '12px' },
+		'style': {
+			'backgroundColor': 'rgba(0, 0, 0, 0.88)',
+			'color': 'white',
+			'fontSize': '12px',
+		},
 	}
 	deck = pdk.Deck( layers=layers, initial_view_state=view_state,
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, earthquakes_tab, fires_tab = st.tabs(
-		[ '🌐 Entities', '📈 Earthquakes', '🔥 Fires' ] )
+	entities_tab, aircraft_tab, satellites_tab, earthquakes_tab, fires_tab = st.tabs(
+		[ '🌐 Entities', '✈️ Aircraft', '🛰️ Satellites', '📈 Earthquakes', '🔥 Fires' ] )
+
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
 			use_container_width=True, disabled=True, hide_index=True )
+
+	with aircraft_tab:
+		df_aircraft_records = st.session_state.get( 'live_world_df_aircraft', pd.DataFrame( ) )
+		if df_aircraft_records is None or df_aircraft_records.empty:
+			st.info( 'No aircraft records loaded.' )
+		else:
+			st.data_editor( make_live_world_display_frame( df_aircraft_records ),
+				key='live_world_aircraft_table', use_container_width=True,
+				disabled=True, hide_index=True )
+
+	with satellites_tab:
+		df_satellite_records = st.session_state.get( 'live_world_df_satellites', pd.DataFrame( ) )
+		if df_satellite_records is None or df_satellite_records.empty:
+			st.info( 'No satellite records loaded.' )
+		else:
+			st.data_editor( make_live_world_display_frame( df_satellite_records ),
+				key='live_world_satellite_table', use_container_width=True,
+				disabled=True, hide_index=True )
+
 	with earthquakes_tab:
 		df_quakes = st.session_state.get( 'live_world_df_earthquakes', pd.DataFrame( ) )
 		if df_quakes is None or df_quakes.empty:
@@ -706,6 +954,7 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			st.data_editor( make_live_world_display_frame( df_quakes ),
 				key='live_world_earthquake_table', use_container_width=True,
 				disabled=True, hide_index=True )
+
 	with fires_tab:
 		df_fire_records = st.session_state.get( 'live_world_df_fires', pd.DataFrame( ) )
 		if df_fire_records is None or df_fire_records.empty:
