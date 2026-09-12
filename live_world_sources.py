@@ -493,3 +493,159 @@ class CelesTrakLive:
 			'Epoch': str( self.record.get( 'EPOCH', '' ) or '' ),
 			'Classification': str( self.record.get( 'CLASSIFICATION_TYPE', '' ) or '' ),
 		}
+
+
+class OverpassInfrastructure:
+	'''
+
+		Purpose:
+		--------
+		Retrieve nearby public infrastructure features from OpenStreetMap through the
+		Overpass API using explicit infrastructure categories.
+
+	'''
+	timeout: int
+	url: str
+	response: Response | None
+	category_filters: Dict[ str, List[ str ] ]
+
+	def __init__( self, timeout: int=30 ) -> None:
+		'''
+
+			Purpose:
+			--------
+			Initialize OpenStreetMap Overpass infrastructure access.
+
+			Parameters:
+			-----------
+			timeout (int): HTTP timeout in seconds.
+
+			Returns:
+			--------
+			None
+
+		'''
+		self.timeout = timeout
+		self.url = 'https://overpass-api.de/api/interpreter'
+		self.response = None
+		self.category_filters = {
+			'Airports': [ '["aeroway"="aerodrome"]', '["aeroway"="heliport"]' ],
+			'Ports': [ '["harbour"="yes"]', '["amenity"="ferry_terminal"]' ],
+			'Power Plants': [ '["power"="plant"]' ],
+			'Dams': [ '["waterway"="dam"]' ],
+			'Data Centers': [ '["telecom"="data_center"]', '["building"="data_center"]' ],
+			'Military Installations': [ '["landuse"="military"]', '["military"]' ],
+		}
+
+	def fetch_infrastructure( self, latitude: float, longitude: float,
+			radius_km: float, categories: List[ str ], max_results: int ) -> Dict[ str, Any ]:
+		'''
+
+			Purpose:
+			--------
+			Retrieve tagged OpenStreetMap infrastructure within a circular search radius.
+
+			Parameters:
+			-----------
+			latitude (float): Search-origin latitude.
+			longitude (float): Search-origin longitude.
+			radius_km (float): Search radius in kilometers.
+			categories (List[str]): Infrastructure categories to retrieve.
+			max_results (int): Maximum normalized Overpass elements to return.
+
+			Returns:
+			--------
+			Dict[str, Any]: Overpass elements with an added InfrastructureCategory field.
+
+		'''
+		throw_if( 'latitude', latitude )
+		throw_if( 'longitude', longitude )
+		throw_if( 'radius_km', radius_km )
+		throw_if( 'categories', categories )
+		throw_if( 'max_results', max_results )
+		self.latitude = float( latitude )
+		self.longitude = float( longitude )
+		self.radius_km = float( radius_km )
+		self.categories = list( categories )
+		self.max_results = int( max_results )
+		if self.latitude < -90.0 or self.latitude > 90.0:
+			raise ValueError( 'Argument "latitude" must be between -90 and 90.' )
+		if self.longitude < -180.0 or self.longitude > 180.0:
+			raise ValueError( 'Argument "longitude" must be between -180 and 180.' )
+		if self.radius_km <= 0.0:
+			raise ValueError( 'Argument "radius_km" must be greater than zero.' )
+		if self.max_results < 1:
+			raise ValueError( 'Argument "max_results" must be greater than zero.' )
+		for category in self.categories:
+			if category not in self.category_filters:
+				raise ValueError( f'Unsupported infrastructure category: {category}' )
+
+		radius_meters = int( self.radius_km * 1000.0 )
+		selectors: List[ str ] = [ ]
+		for category in self.categories:
+			for tag_filter in self.category_filters[ category ]:
+				selectors.append(
+					f'nwr(around:{radius_meters},{self.latitude:.6f},{self.longitude:.6f})'
+					f'{tag_filter};' )
+		query = '[out:json][timeout:25];(' + ''.join( selectors ) + ');out center tags qt;'
+		self.response = requests.post( self.url, data={ 'data': query }, timeout=self.timeout )
+		self.response.raise_for_status( )
+		payload = self.response.json( ) or { }
+		if not isinstance( payload, dict ):
+			raise TypeError( 'Overpass response must be a dictionary.' )
+		elements = payload.get( 'elements', [ ] ) or [ ]
+		if not isinstance( elements, list ):
+			raise TypeError( 'Overpass elements must be a list.' )
+
+		rows: List[ Dict[ str, Any ] ] = [ ]
+		seen: set[ str ] = set( )
+		for element in elements:
+			if not isinstance( element, dict ):
+				continue
+			tags = element.get( 'tags', { } ) or { }
+			category = self.classify_infrastructure( tags )
+			if not category or category not in self.categories:
+				continue
+			entity_key = f'{element.get( "type", "" )}:{element.get( "id", "" )}'
+			if entity_key in seen:
+				continue
+			seen.add( entity_key )
+			row = dict( element )
+			row[ 'InfrastructureCategory' ] = category
+			rows.append( row )
+			if len( rows ) >= self.max_results:
+				break
+		payload[ 'elements' ] = rows
+		return payload
+
+	def classify_infrastructure( self, tags: Dict[ str, Any ] ) -> str:
+		'''
+
+			Purpose:
+			--------
+			Classify one OpenStreetMap tag collection into a supported infrastructure category.
+
+			Parameters:
+			-----------
+			tags (Dict[str, Any]): OpenStreetMap feature tags.
+
+			Returns:
+			--------
+			str: Infrastructure category, or an empty string when unsupported.
+
+		'''
+		throw_if( 'tags', tags )
+		if tags.get( 'aeroway' ) in [ 'aerodrome', 'heliport' ]:
+			return 'Airports'
+		if tags.get( 'harbour' ) == 'yes' or tags.get( 'amenity' ) == 'ferry_terminal':
+			return 'Ports'
+		if tags.get( 'power' ) == 'plant':
+			return 'Power Plants'
+		if tags.get( 'waterway' ) == 'dam':
+			return 'Dams'
+		if tags.get( 'telecom' ) == 'data_center' or tags.get( 'building' ) == 'data_center':
+			return 'Data Centers'
+		if tags.get( 'landuse' ) == 'military' or 'military' in tags:
+			return 'Military Installations'
+		return ''
+
