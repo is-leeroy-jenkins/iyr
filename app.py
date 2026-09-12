@@ -56,6 +56,7 @@ from excel import Excel
 from caches import InMemoryCache, SQLiteCache
 from processing import (render_web_document_processing, render_source_processing_controls,
                         render_mode_document_tabs)
+from live_world import render_live_world_map, render_live_world_sidebar
 from fetchers import (GoogleWeather, OpenWeather, HistoricalWeather, ClimateData, TidesAndCurrents,
                       AirNow, UvIndex, OpenAQ, PurpleAir, EnviroFacts, Firms, EoNet,
                       USGSEarthquakes, USGSWaterData, USGSTheNationalMap, GlobalImagery,
@@ -3178,6 +3179,9 @@ with st.sidebar:
 			st.session_state[ 'previous_mode' ] = mode
 			st.rerun( )
 			
+	# ------- Live World Data
+	render_live_world_sidebar( )
+	
 	# -------- Settings
 	set_blue_divider( )
 	st.markdown( '#### 🎚️ Configuration' )
@@ -7153,3 +7157,10 @@ elif mode == 'Data Management':
 					
 					except Exception as e:
 						st.error( f'Execution failed: {e}' )
+
+# ==============================================================================
+# LIVE WORLD DATA
+# ==============================================================================
+render_live_world_map(
+	latitude=get_global_latitude_default( ),
+	longitude=get_global_longitude_default( ) )
