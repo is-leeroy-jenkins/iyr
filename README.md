@@ -8,23 +8,23 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 
 ## ✨ Core Capabilities
 
-| Capability | Functionality |
-|---|---|
-| 🔎 Geocoding | Free-form and structured address resolution to latitude/longitude coordinates. |
-| 🗺️ Interactive Mapping | Interactive geospatial visualization using PyDeck and configurable map styles. |
-| 📏 Distances | Distance and travel-time calculations between origins and destinations. |
-| 🗺️ Static Maps | Static map generation for reporting, embedding, and downstream workflows. |
-| ⏱️ Time Zones | Coordinate-based IANA time-zone resolution. |
-| 🌐 Site Crawling | Web retrieval and crawling for text/document acquisition. |
-| 🌦️ Weather | Current, forecast, historical, and climate-oriented weather retrieval. |
-| 🌱 Environmental | Air quality, UV, environmental records, active-fire, water, and natural-event data. |
-| 🌎 Geological | Earthquake, water, terrain, and geospatial science data. |
-| 🔭 Astronomical | Astronomical catalogs, solar/space-weather data, satellite data, and astronomy tooling. |
-| 🌌 Celestial Mapping | Star-map and celestial visualization functionality. |
-| 📄 Data Upload | File ingestion and processing for supported structured and document formats. |
-| 🗄️ Data Management | Local application data and persistence workflows. |
-| 🧠 AI/ML Processing | Chunking, embeddings, vector stores, retrieval-ready document preparation, and agent-callable geospatial tools. |
-| 🌐 Live World Data | Aircraft, military aircraft, satellites, vessels, fires, earthquakes, infrastructure, cameras, map layers, tracking, geofencing, replay, and cross-layer analysis. |
+| Capability             | Functionality                                                                                                                                                      |
+|------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 🔎 Geocoding           | Free-form and structured address resolution to latitude/longitude coordinates.                                                                                     |
+| 🗺️ Interactive Mapping | Interactive geospatial visualization using PyDeck and configurable map styles.                                                                                     |
+| 📏 Distances           | Distance and travel-time calculations between origins and destinations.                                                                                            |
+| 🗺️ Static Maps         | Static map generation for reporting, embedding, and downstream workflows.                                                                                          |
+| ⏱️ Time Zones           | Coordinate-based IANA time-zone resolution.                                                                                                                        |
+| 🌐 Site Crawling       | Web retrieval and crawling for text/document acquisition.                                                                                                          |
+| 🌦️ Weather             | Current, forecast, historical, and climate-oriented weather retrieval.                                                                                             |
+| 🌱 Environmental       | Air quality, UV, environmental records, active-fire, water, and natural-event data.                                                                                |
+| 🌎 Geological          | Earthquake, water, terrain, and geospatial science data.                                                                                                           |
+| 🔭 Astronomical        | Astronomical catalogs, solar/space-weather data, satellite data, and astronomy tooling.                                                                            |
+| 🌌 Celestial Mapping   | Star-map and celestial visualization functionality.                                                                                                                |
+| 📄 Data Upload         | File ingestion and processing for supported structured and document formats.                                                                                       |
+| 🗄️ Data Management     | Local application data and persistence workflows.                                                                                                                  |
+| 🧠 AI/ML Processing    | Chunking, embeddings, vector stores, retrieval-ready document preparation, and agent-callable geospatial tools.                                                    |
+| 🌐 Live World Data     | Aircraft, military aircraft, satellites, vessels, fires, earthquakes, infrastructure, cameras, map layers, tracking, geofencing, replay, and cross-layer analysis. |
 
 ## 🌐 Live World Data
 
@@ -32,19 +32,19 @@ Live World Data extends Iyrin with a normalized operational geospatial layer bui
 
 ### Live Layers
 
-| Layer | Source / Functionality |
-|---|---|
-| ✈️ Aircraft | OpenSky Network live state vectors with configurable geographic radius and airborne filtering. |
-| 🛩️ Military Aircraft | ADSB.lol military-tagged aircraft with local nautical-mile filtering. |
-| 🛰️ Satellites | CelesTrak OMM orbital data propagated with SGP4 and converted to Earth-fixed positions. |
-| 🚢 Vessels & Ships | AIS Stream WebSocket position messages with bounded collection and geographic filtering. |
-| 📈 Earthquakes | USGS earthquake feeds with magnitude filtering and normalized event locations. |
-| 🔥 Fires | NASA FIRMS active-fire detections from VIIRS, MODIS, and Landsat sources. |
-| 📡 Infrastructure | OpenStreetMap/Overpass infrastructure features including airports, ports, power plants, dams, data centers, and military installations. |
-| 📷 CCTV / Web Cameras | OpenStreetMap/Overpass surveillance-camera and webcam locations. |
-| 🗺️ Additional Map Layers | Public transit, bike share, emergency services, healthcare, EV charging, communications, and launch sites. |
-| 🎯 Tracking & Trails | Selected moving-entity tracking with persisted in-session path history and optional map following. |
-| 📏 Measurements & Annotations | Great-circle distance, bearing, custom points, entity-to-entity measurements, and map annotations. |
+| Layer                         | Source / Functionality                                                                                                                  |
+|-------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| ✈️ Aircraft                   | OpenSky Network live state vectors with configurable geographic radius and airborne filtering.                                          |
+| 🛩️ Military Aircraft          | ADSB.lol military-tagged aircraft with local nautical-mile filtering.                                                                   |
+| 🛰️ Satellites                 | CelesTrak OMM orbital data propagated with SGP4 and converted to Earth-fixed positions.                                                 |
+| 🚢 Vessels & Ships            | AIS Stream WebSocket position messages with bounded collection and geographic filtering.                                                |
+| 📈 Earthquakes                | USGS earthquake feeds with magnitude filtering and normalized event locations.                                                          |
+| 🔥 Fires                      | NASA FIRMS active-fire detections from VIIRS, MODIS, and Landsat sources.                                                               |
+| 📡 Infrastructure             | OpenStreetMap/Overpass infrastructure features including airports, ports, power plants, dams, data centers, and military installations. |
+| 📷 CCTV / Web Cameras         | OpenStreetMap/Overpass surveillance-camera and webcam locations.                                                                        |
+| 🗺️ Additional Map Layers      | Public transit, bike share, emergency services, healthcare, EV charging, communications, and launch sites.                              |
+| 🎯 Tracking & Trails          | Selected moving-entity tracking with persisted in-session path history and optional map following.                                      |
+| 📏 Measurements & Annotations | Great-circle distance, bearing, custom points, entity-to-entity measurements, and map annotations.                                      |
 
 ### Cross-Layer Spatial Analysis
 
@@ -111,13 +111,13 @@ Embedding Vectors
 
 ### Embedding Providers
 
-| Provider | Supported Models / Mode |
-|---|---|
-| OpenAI | `text-embedding-3-small`, `text-embedding-3-large` |
-| Google Generative AI | `gemini-embedding-2-preview` |
-| Mistral AI | `mistral-embed` |
-| Hugging Face | `sentence-transformers/all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2` |
-| Local GGUF | Local embedding-capable GGUF models through `llama-cpp-python` |
+| Provider             | Supported Models / Mode                                                             |
+|----------------------|-------------------------------------------------------------------------------------|
+| OpenAI               | `text-embedding-3-small`, `text-embedding-3-large`                                  |
+| Google Generative AI | `gemini-embedding-2-preview`                                                        |
+| Mistral AI           | `mistral-embed`                                                                     |
+| Hugging Face         | `sentence-transformers/all-MiniLM-L6-v2`, `sentence-transformers/all-mpnet-base-v2` |
+| Local GGUF           | Local embedding-capable GGUF models through `llama-cpp-python`                      |
 
 ### Embedding Validation
 
@@ -129,10 +129,10 @@ Embedding Vectors
 
 ### Vector Storage
 
-| Backend | Functionality |
-|---|---|
-| Chroma | Local persistent vector collections with configurable persistence directory. |
-| Pinecone | Remote vector indexes with optional namespaces. |
+| Backend  | Functionality                                                                |
+|----------|------------------------------------------------------------------------------|
+| Chroma   | Local persistent vector collections with configurable persistence directory. |
+| Pinecone | Remote vector indexes with optional namespaces.                              |
 
 Vectorized content is prepared for semantic retrieval, RAG pipelines, contextual search, and agent grounding.
 
@@ -254,25 +254,35 @@ Additional map features are normalized as `Map Feature` entities and participate
 streamlit run app.py
 ```
 
-## 🔑 Configuration
+
+## ⚙️ Configuration 
 
 Iyrin reads provider credentials from environment variables where required.
 
-| Environment Variable | Service |
-|---|---|
-| `GOOGLE_API_KEY` | Google APIs |
-| `GOOGLEMAPS_API_KEY` | Google Maps |
-| `GOOGLE_WEATHER_API_KEY` | Google Weather |
-| `NASA_API_KEY` | NASA APIs |
-| `NASA_EARTHDATA_TOKEN` | NASA Earthdata |
-| `FIRMS_MAP_KEY` | NASA FIRMS |
-| `AIRNOW_API_KEY` | EPA AirNow |
-| `OPENAQ_API_KEY` | OpenAQ |
-| `PURPLEAIR_API_KEY` | PurpleAir |
-| `OPENSKY_API_CLIENT_ID` | OpenSky OAuth client ID |
+| Environment Variable      | Service                          |
+|---------------------------|----------------------------------|
+| `GOOGLE_API_KEY`          | Google APIs                      |
+| `GOOGLEMAPS_API_KEY`      | Google Maps                      |
+| `GOOGLE_WEATHER_API_KEY`  | Google Weather                   |
+| `NASA_API_KEY`            | NASA APIs                        |
+| `NASA_EARTHDATA_TOKEN`    | NASA Earthdata                   |
+| `FIRMS_MAP_KEY`           | NASA FIRMS                       |
+| `AIRNOW_API_KEY`          | EPA AirNow                       |
+| `OPENAQ_API_KEY`          | OpenAQ                           |
+| `PURPLEAIR_API_KEY`       | PurpleAir                        |
+| `OPENSKY_API_CLIENT_ID`   | OpenSky OAuth client ID          |
 | `OPENSKY_API_CREDENTIALS` | OpenSky OAuth client credentials |
-| `AISSTREAM_API_KEY` | AIS Stream |
-| `PINECONE_API_KEY` | Pinecone vector storage |
+| `AISSTREAM_API_KEY`       | AIS Stream                       |
+| `PINECONE_API_KEY`        | Pinecone vector storage          |
+
+## 🔑 API 
+
+- [Science APIs](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/API-Setup.md) 
+- [OpenAI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/environments.md) 
+- [Gemini AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/gemini.md) 
+- [Grok AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/xai.md) 
+- [Mistral AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/mistral.md) 
+- [Claude AI](https://github.com/is-leeroy-jenkins/foo/blob/main/resources/setup/claude.md) 
 
 ## 📂 Project Structure
 
@@ -344,6 +354,44 @@ Scientific / Operational APIs
 - Local/private embedding workflows using GGUF models.
 - Vector-search dataset creation with Chroma or Pinecone.
 - Spreadsheet and reporting enrichment.
+
+## 📦 Requirements
+
+The table below reflects the requirements implied by the active imports, loaders, fetchers, and UI
+surface in `app.py`. Some provider-specific loaders/fetchers may require additional credentials or
+cloud SDKs depending on deployment.
+
+| Requirement              | Import / Package Name                 | Purpose                                                               | Required By                                             |
+| ------------------------ | ------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------- |
+| Python                   | `python>=3.10`                        | Runtime for modern typing syntax and Streamlit application execution. | Entire application.                                     |
+| Streamlit                | `streamlit`                           | Web application framework.                                            | UI, sidebar, modes, expanders, controls, session state. |
+| Altair                   | `altair`                              | Declarative charting support.                                         | Visualization and chart-compatible workflows.           |
+| Pandas                   | `pandas`                              | Dataframes, Excel ingestion, SQL result rendering, tabular previews.  | Loaders, Data Management, result tables.                |
+| NumPy                    | `numpy`                               | Numeric arrays and vector calculations.                               | Text/vector utilities and analysis helpers.             |
+| Plotly                   | `plotly`                              | Interactive charts and visualizations.                                | Data Management visualization engine.                   |
+| BeautifulSoup            | `beautifulsoup4`                      | HTML parsing and link/text extraction.                                | Scraping mode and HTML preview helpers.                 |
+| Requests                 | `requests`                            | HTTP request support.                                                 | Web fetchers and API wrappers.                          |
+| Crawl4AI                 | `crawl4ai`                            | JavaScript-capable or enhanced crawling support.                      | Web crawling workflows.                                 |
+| LangChain Core           | `langchain-core`                      | `Document` object model for loaded/retrieved records.                 | Loaders and retrieval result handling.                  |
+| LXML                     | `lxml`                                | XML parsing and XPath operations.                                     | XML Loader.                                             |
+| NLTK                     | `nltk`                                | Tokenization, stopwords, WordNet, corpora, text metrics.              | Loading metrics and Corpora Loader.                     |
+| TextStat                 | `textstat`                            | Optional readability metrics.                                         | Readability panel.                                      |
+| Astroquery               | `astroquery`                          | Astronomical service access, including SIMBAD.                        | Astronomical mode.                                      |
+| SQLite                   | `sqlite3`                             | Local database storage and SQL execution.                             | Data Management and local stores.                       |
+| OpenPyXL                 | `openpyxl`                            | Excel `.xlsx` read/write engine.                                      | Excel Loader and Data Management import.                |
+| Python PPTX              | `python-pptx`                         | PowerPoint text extraction support.                                   | PowerPoint Loader.                                      |
+| PyMuPDF                  | `PyMuPDF`                             | PDF extraction support where used by PDF loader internals.            | PDF Loader.                                             |
+| Unstructured             | `unstructured`                        | Optional document extraction for complex files.                       | PDF/XML/document loader implementations.                |
+| Python DOCX / Docx2Txt   | `python-docx` / `docx2txt`            | Word document extraction support.                                     | WordLoader.                                             |
+| Boto3                    | `boto3`                               | AWS S3 file and bucket access.                                        | AWS S3 File and AWS S3 Bucket loaders.                  |
+| Google API Client        | `google-api-python-client`            | Google Drive and Google API access.                                   | Google Drive and cloud workflows.                       |
+| Google Auth              | `google-auth`, `google-auth-oauthlib` | Google credentials and OAuth flows.                                   | Google Drive, Google Cloud, Google Speech-to-Text.      |
+| Google Cloud Storage     | `google-cloud-storage`                | Google Cloud bucket/file access.                                      | Google Cloud File and Google Cloud Bucket loaders.      |
+| Google Cloud Speech      | `google-cloud-speech`                 | Speech-to-text transcription.                                         | Google Speech-to-Text loader.                           |
+| ArXiv                    | `arxiv`                               | arXiv search and document retrieval.                                  | ArXiv Loader and Retrieval mode.                        |
+| Streamlit Runtime Extras | `watchdog`                            | Optional local development file watching.                             | Local Streamlit development.                            |
+| Environment Variables    | `python-dotenv`                       | Optional `.env` loading for API keys.                                 | Local configuration.                                    |
+| Typing Extensions        | `typing-extensions`                   | Backported typing support where needed.                               | Compatibility support.                                  |
 
 ## 📜 License
 
