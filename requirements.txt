@@ -27,6 +27,7 @@ langchain-googledrive
 arxiv
 wikipedia
 playwright
+websocket-client
 langchain-text-splitters
 langchain-openai
 langchain-google-genai
