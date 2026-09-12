@@ -1,0 +1,98 @@
+name: Integrate Live World Data
+
+on:
+  push:
+    branches:
+      - feature/live-world-data
+    paths:
+      - .github/workflows/integrate-live-world.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-data
+
+      - name: Integrate Live World Data into app.py
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path( 'app.py' )
+          text = path.read_text( encoding='utf-8' )
+
+          import_anchor = (
+              "from processing import (render_web_document_processing, render_source_processing_controls,\n"
+              "                        render_mode_document_tabs)\n"
+          )
+          import_block = import_anchor + (
+              "from live_world import render_live_world_map, render_live_world_sidebar\n"
+          )
+
+          if 'from live_world import render_live_world_map, render_live_world_sidebar' not in text:
+              if import_anchor not in text:
+                  raise RuntimeError( 'Unable to locate processing import anchor.' )
+              text = text.replace( import_anchor, import_block, 1 )
+
+          sidebar_anchor = (
+              "\t\tprevious_mode = st.session_state.get( 'previous_mode', None )\n"
+              "\t\tif previous_mode != mode:\n"
+              "\t\t\tst.session_state[ 'previous_mode' ] = mode\n"
+              "\t\t\tst.rerun( )\n"
+              "\t\t\t\n"
+              "\t# -------- Settings\n"
+          )
+          sidebar_block = (
+              "\t\tprevious_mode = st.session_state.get( 'previous_mode', None )\n"
+              "\t\tif previous_mode != mode:\n"
+              "\t\t\tst.session_state[ 'previous_mode' ] = mode\n"
+              "\t\t\tst.rerun( )\n"
+              "\t\t\t\n"
+              "\t# ------- Live World Data\n"
+              "\trender_live_world_sidebar( )\n"
+              "\t\n"
+              "\t# -------- Settings\n"
+          )
+
+          if '\trender_live_world_sidebar( )\n' not in text:
+              if sidebar_anchor not in text:
+                  raise RuntimeError( 'Unable to locate sidebar insertion anchor.' )
+              text = text.replace( sidebar_anchor, sidebar_block, 1 )
+
+          marker = '# ==============================================================================\n# LIVE WORLD DATA\n# =============================================================================='
+          if marker not in text:
+              text = text.rstrip( ) + (
+                  "\n\n# ==============================================================================\n"
+                  "# LIVE WORLD DATA\n"
+                  "# ==============================================================================\n"
+                  "render_live_world_map(\n"
+                  "\tlatitude=get_global_latitude_default( ),\n"
+                  "\tlongitude=get_global_longitude_default( ) )\n"
+              )
+
+          path.write_text( text, encoding='utf-8' )
+          PY
+
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile app.py live_world.py
+
+      - name: Commit integration
+        shell: bash
+        run: |
+          if git diff --quiet -- app.py; then
+            echo "app.py is already integrated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          git commit -m "Integrate live world data into Streamlit app"
+          git push origin feature/live-world-data
