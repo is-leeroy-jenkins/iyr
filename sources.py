@@ -1,7 +1,7 @@
 '''
 ******************************************************************************************
  Assembly:                iyr
- Filename:                live_world_sources.py
+ Filename:                sources.py
  Author:                  Terry D. Eppler / Assistant
  Created:                 09-12-2026
 
@@ -11,7 +11,7 @@
 
 Purpose:
     Provider clients used by Iyr Live World Data for real-time aircraft state vectors,
-    military aircraft, maritime AIS positions, and current satellite orbital elements.
+    military aircraft, maritime AIS positions, current satellite orbital elements, public infrastructure, and public camera features.
     OpenSky access uses the current OAuth2 client-credentials flow when API-client
     credentials are available. ADSB.lol provides public military-tagged aircraft data.
     AIS Stream provides server-side WebSocket maritime position events. CelesTrak data is
@@ -647,5 +647,148 @@ class OverpassInfrastructure:
 			return 'Data Centers'
 		if tags.get( 'landuse' ) == 'military' or 'military' in tags:
 			return 'Military Installations'
+		return ''
+
+class OverpassCameras:
+	'''
+
+		Purpose:
+		--------
+		Retrieve nearby public CCTV, surveillance-camera, and webcam features from
+		OpenStreetMap through the Overpass API.
+
+	'''
+	timeout: int
+	url: str
+	response: Response | None
+	category_filters: Dict[ str, List[ str ] ]
+
+	def __init__( self, timeout: int=30 ) -> None:
+		'''
+
+			Purpose:
+			--------
+			Initialize OpenStreetMap Overpass camera access.
+
+			Parameters:
+			-----------
+			timeout (int): HTTP timeout in seconds.
+
+			Returns:
+			--------
+			None
+
+		'''
+		self.timeout = timeout
+		self.url = 'https://overpass-api.de/api/interpreter'
+		self.response = None
+		self.category_filters = {
+			'CCTV / Surveillance': [
+				'["man_made"="surveillance"]', '["surveillance:type"="camera"]' ],
+			'Web Cameras': [ '["webcam"]', '["contact:webcam"]' ],
+		}
+
+	def fetch_cameras( self, latitude: float, longitude: float, radius_km: float,
+			categories: List[ str ], max_results: int ) -> Dict[ str, Any ]:
+		'''
+
+			Purpose:
+			--------
+			Retrieve tagged public camera features within a circular search radius.
+
+			Parameters:
+			-----------
+			latitude (float): Search-origin latitude.
+			longitude (float): Search-origin longitude.
+			radius_km (float): Search radius in kilometers.
+			categories (List[str]): Camera categories to retrieve.
+			max_results (int): Maximum normalized Overpass elements to return.
+
+			Returns:
+			--------
+			Dict[str, Any]: Overpass elements with an added CameraCategory field.
+
+		'''
+		throw_if( 'latitude', latitude )
+		throw_if( 'longitude', longitude )
+		throw_if( 'radius_km', radius_km )
+		throw_if( 'categories', categories )
+		throw_if( 'max_results', max_results )
+		self.latitude = float( latitude )
+		self.longitude = float( longitude )
+		self.radius_km = float( radius_km )
+		self.categories = list( categories )
+		self.max_results = int( max_results )
+		if self.latitude < -90.0 or self.latitude > 90.0:
+			raise ValueError( 'Argument "latitude" must be between -90 and 90.' )
+		if self.longitude < -180.0 or self.longitude > 180.0:
+			raise ValueError( 'Argument "longitude" must be between -180 and 180.' )
+		if self.radius_km <= 0.0:
+			raise ValueError( 'Argument "radius_km" must be greater than zero.' )
+		if self.max_results < 1:
+			raise ValueError( 'Argument "max_results" must be greater than zero.' )
+		for category in self.categories:
+			if category not in self.category_filters:
+				raise ValueError( f'Unsupported camera category: {category}' )
+
+		radius_meters = int( self.radius_km * 1000.0 )
+		selectors: List[ str ] = [ ]
+		for category in self.categories:
+			for tag_filter in self.category_filters[ category ]:
+				selectors.append(
+					f'nwr(around:{radius_meters},{self.latitude:.6f},{self.longitude:.6f})'
+					f'{tag_filter};' )
+		query = '[out:json][timeout:25];(' + ''.join( selectors ) + ');out center tags qt;'
+		self.response = requests.post( self.url, data={ 'data': query }, timeout=self.timeout )
+		self.response.raise_for_status( )
+		payload = self.response.json( ) or { }
+		if not isinstance( payload, dict ):
+			raise TypeError( 'Overpass camera response must be a dictionary.' )
+		elements = payload.get( 'elements', [ ] ) or [ ]
+		if not isinstance( elements, list ):
+			raise TypeError( 'Overpass camera elements must be a list.' )
+
+		rows: List[ Dict[ str, Any ] ] = [ ]
+		seen: set[ str ] = set( )
+		for element in elements:
+			if not isinstance( element, dict ):
+				continue
+			tags = element.get( 'tags', { } ) or { }
+			category = self.classify_camera( tags )
+			if not category or category not in self.categories:
+				continue
+			entity_key = f'{element.get( "type", "" )}:{element.get( "id", "" )}'
+			if entity_key in seen:
+				continue
+			seen.add( entity_key )
+			row = dict( element )
+			row[ 'CameraCategory' ] = category
+			rows.append( row )
+			if len( rows ) >= self.max_results:
+				break
+		payload[ 'elements' ] = rows
+		return payload
+
+	def classify_camera( self, tags: Dict[ str, Any ] ) -> str:
+		'''
+
+			Purpose:
+			--------
+			Classify one OpenStreetMap camera feature into a supported camera category.
+
+			Parameters:
+			-----------
+			tags (Dict[str, Any]): OpenStreetMap feature tags.
+
+			Returns:
+			--------
+			str: Camera category, or an empty string when unsupported.
+
+		'''
+		throw_if( 'tags', tags )
+		if tags.get( 'webcam' ) or tags.get( 'contact:webcam' ):
+			return 'Web Cameras'
+		if tags.get( 'man_made' ) == 'surveillance' or tags.get( 'surveillance:type' ) == 'camera':
+			return 'CCTV / Surveillance'
 		return ''
 

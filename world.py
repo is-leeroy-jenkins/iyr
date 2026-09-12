@@ -1,7 +1,7 @@
 '''
 ******************************************************************************************
  Assembly:                iyr
- Filename:                live_world.py
+ Filename:                world.py
  Author:                  Terry D. Eppler / Assistant
  Created:                 09-12-2026
 
@@ -12,7 +12,7 @@
 Purpose:
     Live World Data functionality inspired by God's Eye View while preserving Iyr's
     existing GIS modes and execution paths. The module provides isolated sidebar state,
-    live aircraft, military aircraft, satellite, vessel, earthquake, and active-fire retrieval,
+    live aircraft, military aircraft, satellite, vessel, earthquake, active-fire, infrastructure, and public-camera retrieval,
     normalized geospatial entities, operational PyDeck rendering, entity tracking and trails,
     refresh controls,
     filtering, and source-data inspection.
@@ -33,11 +33,11 @@ import pydeck as pdk
 import streamlit as st
 
 from fetchers import Firms, USGSEarthquakes
-from live_world_history import (
+from history import (
 	clear_live_world_history, get_live_world_history_snapshots, get_live_world_history_summary,
 	load_live_world_history, persist_live_world_history, purge_live_world_history )
-from live_world_sources import (
-	AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive, OverpassInfrastructure )
+from sources import (
+	AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive, OverpassCameras, OverpassInfrastructure )
 
 
 LIVE_WORLD_LAYERS: Dict[ str, str ] = {
@@ -50,10 +50,10 @@ LIVE_WORLD_LAYERS: Dict[ str, str ] = {
 	'tracking': '🎯 Tracking & Trails',
 	'measurements': '📏 Measurements & Annotations',
 	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
+	'cameras': '📷 CCTV / Web Cameras',
 }
 
 LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
-	'cameras': '📷 CCTV / Web Cameras',
 	'map_layers': '🗺️ Additional Map Layers',
 }
 
@@ -166,6 +166,10 @@ def initialize_live_world_state( ) -> None:
 		'live_world_infrastructure_categories': [
 			'Airports', 'Ports', 'Power Plants', 'Dams', 'Data Centers' ],
 		'live_world_infrastructure_limit': 500,
+		'live_world_cameras': False,
+		'live_world_camera_radius_km': 25,
+		'live_world_camera_categories': [ 'CCTV / Surveillance', 'Web Cameras' ],
+		'live_world_camera_limit': 500,
 		'live_world_tracking': False,
 		'live_world_tracking_entity': '',
 		'live_world_tracking_active_entity': '',
@@ -190,7 +194,7 @@ def initialize_live_world_state( ) -> None:
 		'live_world_analysis_radius_nm': 250,
 		'live_world_analysis_entity_types': [
 			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
-			'Infrastructure' ],
+			'Infrastructure', 'Camera' ],
 		'live_world_analysis_limit': 100,
 		'live_world_geofencing': False,
 		'live_world_geofence_origin': 'Current Location',
@@ -199,7 +203,7 @@ def initialize_live_world_state( ) -> None:
 		'live_world_geofence_radius_nm': 50,
 		'live_world_geofence_entity_types': [
 			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
-			'Infrastructure' ],
+			'Infrastructure', 'Camera' ],
 		'live_world_geofence_event_limit': 100,
 		'live_world_geofence_events': [ ],
 		'live_world_geofence_snapshot': { },
@@ -211,7 +215,7 @@ def initialize_live_world_state( ) -> None:
 		'live_world_history_window': '24 Hours',
 		'live_world_history_entity_types': [
 			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
-			'Infrastructure' ],
+			'Infrastructure', 'Camera' ],
 		'live_world_history_limit': 5000,
 		'live_world_history_snapshot': '',
 		'live_world_history_last_saved': 0,
@@ -227,6 +231,7 @@ def initialize_live_world_state( ) -> None:
 		'live_world_df_earthquakes': pd.DataFrame( ),
 		'live_world_df_fires': pd.DataFrame( ),
 		'live_world_df_infrastructure': pd.DataFrame( ),
+		'live_world_df_cameras': pd.DataFrame( ),
 		'live_world_aircraft_result': { },
 		'live_world_military_aircraft_result': { },
 		'live_world_satellite_result': [ ],
@@ -234,6 +239,7 @@ def initialize_live_world_state( ) -> None:
 		'live_world_earthquake_result': { },
 		'live_world_firms_result': { },
 		'live_world_infrastructure_result': { },
+		'live_world_camera_result': { },
 		'live_world_map_style': 'Carto Dark Matter',
 		'live_world_zoom': 4,
 		'live_world_point_scale': 1.0,
@@ -435,6 +441,20 @@ def render_live_world_sidebar( ) -> None:
 					st.slider( 'Infrastructure Limit', min_value=50, max_value=2000,
 						step=50, key='live_world_infrastructure_limit' )
 				st.caption( 'Infrastructure features are retrieved from OpenStreetMap via Overpass.' )
+
+			st.checkbox( LIVE_WORLD_LAYERS[ 'cameras' ], key='live_world_cameras' )
+			if st.session_state[ 'live_world_cameras' ]:
+				st.multiselect( 'Camera Categories',
+					options=[ 'CCTV / Surveillance', 'Web Cameras' ],
+					key='live_world_camera_categories' )
+				camera_c1, camera_c2 = st.columns( 2 )
+				with camera_c1:
+					st.slider( 'Camera Radius (KM)', min_value=1, max_value=100,
+						step=1, key='live_world_camera_radius_km' )
+				with camera_c2:
+					st.slider( 'Camera Limit', min_value=50, max_value=2000,
+						step=50, key='live_world_camera_limit' )
+				st.caption( 'Public camera locations and webcam tags are retrieved from OpenStreetMap via Overpass.' )
 			for label in LIVE_WORLD_PENDING_LAYERS.values( ):
 				st.checkbox( label, value=False, disabled=True )
 
@@ -560,6 +580,7 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_df_earthquakes' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_df_cameras' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_aircraft_result' ] = { }
 	st.session_state[ 'live_world_military_aircraft_result' ] = { }
 	st.session_state[ 'live_world_satellite_result' ] = [ ]
@@ -567,6 +588,7 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_earthquake_result' ] = { }
 	st.session_state[ 'live_world_firms_result' ] = { }
 	st.session_state[ 'live_world_infrastructure_result' ] = { }
+	st.session_state[ 'live_world_camera_result' ] = { }
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
 	st.session_state[ 'live_world_annotations' ] = [ ]
@@ -1211,6 +1233,88 @@ def fetch_live_infrastructure( latitude: float, longitude: float ) -> pd.DataFra
 			metadata=metadata ) )
 
 	st.session_state[ 'live_world_infrastructure_result' ] = result
+	return entities_to_dataframe( entities )
+
+
+def fetch_live_cameras( latitude: float, longitude: float ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Retrieve public CCTV, surveillance-camera, and webcam features from OpenStreetMap
+		Overpass and normalize them into the Live World GeoEntity contract.
+
+		Parameters:
+		-----------
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+
+		Returns:
+		--------
+		pd.DataFrame: Normalized camera entities.
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	categories = list( st.session_state.get( 'live_world_camera_categories', [ ] ) or [ ] )
+	if not categories:
+		return entities_to_dataframe( [ ] )
+	radius_km = float( st.session_state[ 'live_world_camera_radius_km' ] )
+	limit = int( st.session_state[ 'live_world_camera_limit' ] )
+	service = OverpassCameras( timeout=30 )
+	result = service.fetch_cameras( latitude, longitude, radius_km, categories, limit )
+	elements = result.get( 'elements', [ ] ) or [ ]
+	entities: List[ GeoEntity ] = [ ]
+	observed_at = dt.datetime.now( dt.timezone.utc ).isoformat( )
+
+	for element in elements:
+		if not isinstance( element, dict ):
+			continue
+		center = element.get( 'center', { } ) or { }
+		latitude_value = element.get( 'lat', center.get( 'lat', None ) )
+		longitude_value = element.get( 'lon', center.get( 'lon', None ) )
+		if latitude_value is None or longitude_value is None:
+			continue
+		try:
+			lat = float( latitude_value )
+			lon = float( longitude_value )
+		except ( TypeError, ValueError ):
+			continue
+		tags = element.get( 'tags', { } ) or { }
+		category = str( element.get( 'CameraCategory', '' ) or 'Camera' )
+		osm_type = str( element.get( 'type', '' ) or '' )
+		osm_id = str( element.get( 'id', '' ) or '' )
+		entity_id = f'OSM-CAMERA-{osm_type}-{osm_id}'
+		web_url = str( tags.get( 'webcam', '' ) or tags.get( 'contact:webcam', '' )
+			or tags.get( 'website', '' ) or tags.get( 'url', '' ) or '' )
+		name = str( tags.get( 'name', '' ) or tags.get( 'operator', '' )
+			or f'{category} {osm_id}' )
+		metadata = {
+			'Category': category,
+			'OSM Type': osm_type,
+			'OSM ID': osm_id,
+			'Operator': tags.get( 'operator', '' ),
+			'Surveillance Type': tags.get( 'surveillance:type', '' ),
+			'Surveillance Zone': tags.get( 'surveillance:zone', '' ),
+			'Direction': tags.get( 'camera:direction', tags.get( 'direction', '' ) ),
+			'Web URL': web_url,
+			'Tags': tags,
+		}
+		entities.append( GeoEntity(
+			entity_id=entity_id,
+			entity_type='Camera',
+			name=name,
+			latitude=lat,
+			longitude=lon,
+			altitude=0.0,
+			heading=0.0,
+			speed=0.0,
+			timestamp=observed_at,
+			source='OpenStreetMap Overpass',
+			metadata=metadata ) )
+
+	st.session_state[ 'live_world_camera_result' ] = result
 	return entities_to_dataframe( entities )
 
 
@@ -2135,6 +2239,14 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 		else:
 			st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )
 
+		if st.session_state[ 'live_world_cameras' ]:
+			df_cameras = fetch_live_cameras( latitude, longitude )
+			st.session_state[ 'live_world_df_cameras' ] = df_cameras
+			if not df_cameras.empty:
+				frames.append( df_cameras )
+		else:
+			st.session_state[ 'live_world_df_cameras' ] = pd.DataFrame( )
+
 		df_entities = pd.concat( frames,
 			ignore_index=True ) if frames else entities_to_dataframe( [ ] )
 		st.session_state[ 'live_world_df_entities' ] = df_entities
@@ -2227,12 +2339,13 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		f'{int( (df_map[ "EntityType" ] == "Satellite").sum( ) ):,}' )
 	metric_c5.metric( 'Vessels',
 		f'{int( (df_map[ "EntityType" ] == "Vessel").sum( ) ):,}' )
-	event_c1, event_c2, event_c3 = st.columns( 3, border=True )
+	event_c1, event_c2, event_c3, event_c4 = st.columns( 4, border=True )
 	event_c1.metric( 'Earthquakes',
 		f'{int( (df_map[ "EntityType" ] == "Earthquake").sum( ) ):,}' )
 	event_c2.metric( 'Fires', f'{int( (df_map[ "EntityType" ] == "Fire").sum( ) ):,}' )
 	event_c3.metric( 'Infrastructure',
 		f'{int( (df_map[ "EntityType" ] == "Infrastructure").sum( ) ):,}' )
+	event_c4.metric( 'Cameras', f'{int( (df_map[ "EntityType" ] == "Camera").sum( ) ):,}' )
 	st.caption( f'Last refresh: {last_refresh}' )
 
 	map_style_options = {
@@ -2263,6 +2376,7 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 	df_earthquakes = df_map[ df_map[ 'EntityType' ] == 'Earthquake' ].copy( )
 	df_fires = df_map[ df_map[ 'EntityType' ] == 'Fire' ].copy( )
 	df_infrastructure = df_map[ df_map[ 'EntityType' ] == 'Infrastructure' ].copy( )
+	df_cameras = df_map[ df_map[ 'EntityType' ] == 'Camera' ].copy( )
 
 	df_analysis = pd.DataFrame( )
 	analysis_origin: Dict[ str, object ] = { }
@@ -2440,6 +2554,14 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			get_fill_color=[ 255, 165, 60, 190 ], get_line_color=[ 255, 225, 180, 255 ],
 			line_width_min_pixels=1, stroked=True, pickable=True ) )
 
+	if not df_cameras.empty:
+		df_cameras[ 'Radius' ] = 7500.0 * point_scale
+		layers.append( pdk.Layer( 'ScatterplotLayer', data=df_cameras,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 70, 210, 255, 205 ], get_line_color=[ 220, 250, 255, 255 ],
+			line_width_min_pixels=1, radius_min_pixels=5, radius_max_pixels=28,
+			stroked=True, pickable=True ) )
+
 	df_tracking = get_live_world_tracking_frame( )
 	if st.session_state[ 'live_world_tracking' ] and not df_tracking.empty:
 		if len( df_tracking ) > 1:
@@ -2529,10 +2651,10 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, infrastructure_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab, history_tab = st.tabs(
+	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, infrastructure_tab, cameras_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab, history_tab = st.tabs(
 		[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
-			'📈 Earthquakes', '🔥 Fires', '📡 Infrastructure', '🎯 Tracking', '📏 Measurements',
-			'🧭 Analysis', '🛡️ Geofence', '🕓 Historical Replay' ] )
+			'📈 Earthquakes', '🔥 Fires', '📡 Infrastructure', '📷 Cameras', '🎯 Tracking',
+			'📏 Measurements', '🧭 Analysis', '🛡️ Geofence', '🕓 Historical Replay' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -2607,6 +2729,26 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			df_display[ 'Category' ] = categories
 			st.data_editor( df_display[ [ 'EntityId', 'Category', 'Name', 'Latitude', 'Longitude',
 				'Source', 'Metadata' ] ], key='live_world_infrastructure_table',
+				use_container_width=True, disabled=True, hide_index=True )
+
+
+	with cameras_tab:
+		if df_cameras.empty:
+			st.info( 'No public CCTV or webcam features are loaded.' )
+		else:
+			categories = df_cameras[ 'Metadata' ].map(
+				lambda value: value.get( 'Category', '' ) if isinstance( value, dict ) else '' )
+			web_urls = df_cameras[ 'Metadata' ].map(
+				lambda value: value.get( 'Web URL', '' ) if isinstance( value, dict ) else '' )
+			camera_c1, camera_c2, camera_c3 = st.columns( 3, border=True )
+			camera_c1.metric( 'Cameras', f'{len( df_cameras.index ):,}' )
+			camera_c2.metric( 'Categories', f'{categories.nunique( ):,}' )
+			camera_c3.metric( 'Web URLs', f'{int( web_urls.astype( bool ).sum( ) ):,}' )
+			df_display = df_cameras.copy( )
+			df_display[ 'Category' ] = categories
+			df_display[ 'WebURL' ] = web_urls
+			st.data_editor( df_display[ [ 'EntityId', 'Category', 'Name', 'Latitude', 'Longitude',
+				'WebURL', 'Source', 'Metadata' ] ], key='live_world_camera_table',
 				use_container_width=True, disabled=True, hide_index=True )
 
 	with tracking_tab:
