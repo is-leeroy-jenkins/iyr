@@ -1,0 +1,617 @@
+name: Implement Live World Military and Vessels
+
+on:
+  push:
+    branches:
+      - feature/live-world-military-vessels
+    paths:
+      - .github/workflows/implement-live-world-military-vessels.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-military-vessels
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Implement military aircraft and vessels
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path( 'live_world.py' )
+          text = path.read_text( encoding='utf-8' )
+
+          def replace_once( old: str, new: str, label: str ) -> None:
+              global text
+              if old not in text:
+                  raise RuntimeError( f'{label} anchor not found.' )
+              text = text.replace( old, new, 1 )
+
+          replace_once(
+              "import datetime as dt\nimport json\n",
+              "import datetime as dt\nimport json\nimport math\nimport os\n",
+              'Imports' )
+
+          replace_once(
+              "from live_world_sources import CelesTrakLive, OpenSkyLive\n",
+              "from live_world_sources import AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive\n",
+              'Provider imports' )
+
+          replace_once(
+              """LIVE_WORLD_LAYERS: Dict[ str, str ] = {
+          \t'aircraft': '✈️ Aircraft (Live)',
+          \t'satellites': '🛰️ Satellites',
+          \t'earthquakes': '📈 Earthquakes',
+          \t'fires': '🔥 Fires (Wildfires)',
+          \t'tracking': '🎯 Tracking & Trails',
+          }
+
+          LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
+          \t'military_aircraft': '🛩️ Military Aircraft',
+          \t'vessels': '🚢 Vessels & Ships',
+          \t'cameras': '📷 CCTV / Web Cameras',
+          """,
+              """LIVE_WORLD_LAYERS: Dict[ str, str ] = {
+          \t'aircraft': '✈️ Aircraft (Live)',
+          \t'military_aircraft': '🛩️ Military Aircraft',
+          \t'satellites': '🛰️ Satellites',
+          \t'vessels': '🚢 Vessels & Ships',
+          \t'earthquakes': '📈 Earthquakes',
+          \t'fires': '🔥 Fires (Wildfires)',
+          \t'tracking': '🎯 Tracking & Trails',
+          }
+
+          LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
+          \t'cameras': '📷 CCTV / Web Cameras',
+          """,
+              'Layer definitions' )
+
+          replace_once(
+              """\t\t'live_world_aircraft_airborne_only': True,
+          \t\t'live_world_satellites': False,
+          """,
+              """\t\t'live_world_aircraft_airborne_only': True,
+          \t\t'live_world_military_aircraft': False,
+          \t\t'live_world_military_radius_nm': 250,
+          \t\t'live_world_satellites': False,
+          """,
+              'Military state defaults' )
+
+          replace_once(
+              """\t\t'live_world_satellite_limit': 100,
+          \t\t'live_world_earthquakes': False,
+          """,
+              """\t\t'live_world_satellite_limit': 100,
+          \t\t'live_world_vessels': False,
+          \t\t'live_world_aisstream_api_key': os.getenv( 'AISSTREAM_API_KEY', '' ) or '',
+          \t\t'live_world_vessel_radius': 2.0,
+          \t\t'live_world_vessel_limit': 100,
+          \t\t'live_world_earthquakes': False,
+          """,
+              'Vessel state defaults' )
+
+          replace_once(
+              """\t\t'live_world_df_aircraft': pd.DataFrame( ),
+          \t\t'live_world_df_satellites': pd.DataFrame( ),
+          """,
+              """\t\t'live_world_df_aircraft': pd.DataFrame( ),
+          \t\t'live_world_df_military_aircraft': pd.DataFrame( ),
+          \t\t'live_world_df_satellites': pd.DataFrame( ),
+          \t\t'live_world_df_vessels': pd.DataFrame( ),
+          """,
+              'Dataframe state defaults' )
+
+          replace_once(
+              """\t\t'live_world_aircraft_result': { },
+          \t\t'live_world_satellite_result': [ ],
+          """,
+              """\t\t'live_world_aircraft_result': { },
+          \t\t'live_world_military_aircraft_result': { },
+          \t\t'live_world_satellite_result': [ ],
+          \t\t'live_world_vessel_result': [ ],
+          """,
+              'Provider result defaults' )
+
+          replace_once(
+              """\t\t\tst.caption( 'OpenSky API Client credentials are used when configured.' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'satellites' ], key='live_world_satellites' )
+          """,
+              """\t\t\tst.caption( 'OpenSky API Client credentials are used when configured.' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'military_aircraft' ],
+          \t\t\tkey='live_world_military_aircraft' )
+          \t\tif st.session_state[ 'live_world_military_aircraft' ]:
+          \t\t\tst.slider( 'Military Aircraft Radius (NM)', min_value=25, max_value=250,
+          \t\t\t\tstep=25, key='live_world_military_radius_nm' )
+          \t\t\tst.caption( 'Military-tagged aircraft are retrieved from ADSB.lol.' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'satellites' ], key='live_world_satellites' )
+          """,
+              'Military sidebar' )
+
+          replace_once(
+              """\t\t\tst.slider( 'Satellite Limit', min_value=10, max_value=500, step=10,
+          \t\t\t\tkey='live_world_satellite_limit' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'earthquakes' ], key='live_world_earthquakes' )
+          """,
+              """\t\t\tst.slider( 'Satellite Limit', min_value=10, max_value=500, step=10,
+          \t\t\t\tkey='live_world_satellite_limit' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'vessels' ], key='live_world_vessels' )
+          \t\tif st.session_state[ 'live_world_vessels' ]:
+          \t\t\tst.text_input( 'AIS Stream API Key', type='password',
+          \t\t\t\tkey='live_world_aisstream_api_key',
+          \t\t\t\thelp='Uses AISSTREAM_API_KEY when configured in the environment.' )
+          \t\t\tst.slider( 'Vessel Radius (Degrees)', min_value=0.25, max_value=10.0,
+          \t\t\t\tstep=0.25, key='live_world_vessel_radius' )
+          \t\t\tst.slider( 'Vessel Message Limit', min_value=10, max_value=250, step=10,
+          \t\t\t\tkey='live_world_vessel_limit' )
+
+          \t\tst.checkbox( LIVE_WORLD_LAYERS[ 'earthquakes' ], key='live_world_earthquakes' )
+          """,
+              'Vessel sidebar' )
+
+          replace_once(
+              "st.info( 'Refresh Aircraft or Satellites before selecting a tracked entity.' )",
+              "st.info( 'Refresh a moving Live World layer before selecting a tracked entity.' )",
+              'Tracking sidebar message' )
+
+          replace_once(
+              """\tst.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+          \tst.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
+          """,
+              """\tst.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+          \tst.session_state[ 'live_world_df_military_aircraft' ] = pd.DataFrame( )
+          \tst.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
+          \tst.session_state[ 'live_world_df_vessels' ] = pd.DataFrame( )
+          """,
+              'Clear dataframe state' )
+
+          replace_once(
+              """\tst.session_state[ 'live_world_aircraft_result' ] = { }
+          \tst.session_state[ 'live_world_satellite_result' ] = [ ]
+          """,
+              """\tst.session_state[ 'live_world_aircraft_result' ] = { }
+          \tst.session_state[ 'live_world_military_aircraft_result' ] = { }
+          \tst.session_state[ 'live_world_satellite_result' ] = [ ]
+          \tst.session_state[ 'live_world_vessel_result' ] = [ ]
+          """,
+              'Clear provider state' )
+
+          marker = "\ndef fetch_live_satellites( ) -> pd.DataFrame:\n"
+          if marker not in text:
+              raise RuntimeError( 'Provider insertion marker not found.' )
+
+          functions = """
+
+          def calculate_live_world_distance_nm( latitude_a: float, longitude_a: float,
+          \t\tlatitude_b: float, longitude_b: float ) -> float:
+          \t'''
+
+          \t\tPurpose:
+          \t\t--------
+          \t\tCalculate great-circle distance between two geospatial points in nautical miles.
+
+          \t\tParameters:
+          \t\t-----------
+          \t\tlatitude_a (float): First latitude.
+          \t\tlongitude_a (float): First longitude.
+          \t\tlatitude_b (float): Second latitude.
+          \t\tlongitude_b (float): Second longitude.
+
+          \t\tReturns:
+          \t\t--------
+          \t\tfloat: Great-circle distance in nautical miles.
+
+          \t'''
+          \tthrow_if( 'latitude_a', latitude_a )
+          \tthrow_if( 'longitude_a', longitude_a )
+          \tthrow_if( 'latitude_b', latitude_b )
+          \tthrow_if( 'longitude_b', longitude_b )
+          \tlat_a = math.radians( float( latitude_a ) )
+          \tlat_b = math.radians( float( latitude_b ) )
+          \tdelta_lat = math.radians( float( latitude_b ) - float( latitude_a ) )
+          \tdelta_lon = math.radians( float( longitude_b ) - float( longitude_a ) )
+          \tvalue = (math.sin( delta_lat / 2.0 ) ** 2
+          \t\t+ math.cos( lat_a ) * math.cos( lat_b ) * math.sin( delta_lon / 2.0 ) ** 2)
+          \tcentral_angle = 2.0 * math.atan2( math.sqrt( value ), math.sqrt( 1.0 - value ) )
+          \treturn 3440.065 * central_angle
+
+
+          def fetch_live_military_aircraft( latitude: float, longitude: float ) -> pd.DataFrame:
+          \t'''
+
+          \t\tPurpose:
+          \t\t--------
+          \t\tRetrieve ADSB.lol military-tagged aircraft and normalize aircraft within the
+          \t\tconfigured nautical-mile radius around the current Iyr location.
+
+          \t\tParameters:
+          \t\t-----------
+          \t\tlatitude (float): Geographic center latitude.
+          \t\tlongitude (float): Geographic center longitude.
+
+          \t\tReturns:
+          \t\t--------
+          \t\tpd.DataFrame: Normalized military-aircraft entities.
+
+          \t'''
+          \tinitialize_live_world_state( )
+          \tthrow_if( 'latitude', latitude )
+          \tthrow_if( 'longitude', longitude )
+          \tradius_nm = float( st.session_state[ 'live_world_military_radius_nm' ] )
+          \tservice = AdsbLolMilitary( timeout=20 )
+          \tresult = service.fetch_military( ) or { }
+          \trows = result.get( 'ac', [ ] ) or [ ]
+          \tentities: List[ GeoEntity ] = [ ]
+
+          \tfor index, row in enumerate( rows ):
+          \t\tif not isinstance( row, dict ):
+          \t\t\tcontinue
+          \t\tlatitude_value = row.get( 'lat', None )
+          \t\tlongitude_value = row.get( 'lon', None )
+          \t\tif latitude_value is None or longitude_value is None:
+          \t\t\tcontinue
+
+          \t\ttry:
+          \t\t\tlat = float( latitude_value )
+          \t\t\tlon = float( longitude_value )
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\tcontinue
+
+          \t\tdistance_nm = calculate_live_world_distance_nm( latitude, longitude, lat, lon )
+          \t\tif distance_nm > radius_nm:
+          \t\t\tcontinue
+
+          \t\taltitude = row.get( 'alt_geom', row.get( 'alt_baro', 0.0 ) )
+          \t\tground_speed = row.get( 'gs', 0.0 )
+          \t\theading = row.get( 'track', row.get( 'true_heading', 0.0 ) )
+          \t\ttry:
+          \t\t\taltitude_meters = float( altitude ) * 0.3048 if altitude not in [ None, 'ground' ] else 0.0
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\taltitude_meters = 0.0
+          \t\ttry:
+          \t\t\tspeed_mps = float( ground_speed ) * 0.514444 if ground_speed is not None else 0.0
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\tspeed_mps = 0.0
+          \t\ttry:
+          \t\t\theading_value = float( heading ) if heading is not None else 0.0
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\theading_value = 0.0
+
+          \t\thex_id = str( row.get( 'hex', '' ) or '' ).strip( )
+          \t\tflight = str( row.get( 'flight', '' ) or '' ).strip( )
+          \t\tregistration = str( row.get( 'r', '' ) or '' ).strip( )
+          \t\tmetadata = {
+          \t\t\t'ICAO Hex': hex_id,
+          \t\t\t'Callsign': flight,
+          \t\t\t'Registration': registration,
+          \t\t\t'Aircraft Type': row.get( 't', '' ),
+          \t\t\t'Description': row.get( 'desc', '' ),
+          \t\t\t'Category': row.get( 'category', '' ),
+          \t\t\t'Squawk': row.get( 'squawk', '' ),
+          \t\t\t'Emergency': row.get( 'emergency', '' ),
+          \t\t\t'DB Flags': row.get( 'dbFlags', 1 ),
+          \t\t\t'Altitude (ft)': altitude,
+          \t\t\t'Ground Speed (kt)': ground_speed,
+          \t\t\t'Vertical Rate': row.get( 'baro_rate', row.get( 'geom_rate', None ) ),
+          \t\t\t'Distance (NM)': round( distance_nm, 2 ),
+          \t\t}
+          \t\tentities.append( GeoEntity(
+          \t\t\tentity_id=hex_id or f'ADSBLOL-MIL-{index + 1}',
+          \t\t\tentity_type='Military Aircraft',
+          \t\t\tname=flight or registration or hex_id,
+          \t\t\tlatitude=lat,
+          \t\t\tlongitude=lon,
+          \t\t\taltitude=altitude_meters,
+          \t\t\theading=heading_value,
+          \t\t\tspeed=speed_mps,
+          \t\t\ttimestamp=dt.datetime.now( dt.timezone.utc ).isoformat( ),
+          \t\t\tsource='ADSB.lol',
+          \t\t\tmetadata=metadata ) )
+
+          \tst.session_state[ 'live_world_military_aircraft_result' ] = result
+          \treturn entities_to_dataframe( entities )
+
+
+          def fetch_live_vessels( latitude: float, longitude: float ) -> pd.DataFrame:
+          \t'''
+
+          \t\tPurpose:
+          \t\t--------
+          \t\tRetrieve a bounded live AIS Stream vessel sample around the current Iyr location
+          \t\tand normalize the messages for Live World rendering and tracking.
+
+          \t\tParameters:
+          \t\t-----------
+          \t\tlatitude (float): Geographic center latitude.
+          \t\tlongitude (float): Geographic center longitude.
+
+          \t\tReturns:
+          \t\t--------
+          \t\tpd.DataFrame: Normalized vessel entities.
+
+          \t'''
+          \tinitialize_live_world_state( )
+          \tthrow_if( 'latitude', latitude )
+          \tthrow_if( 'longitude', longitude )
+          \tapi_key = str( st.session_state.get( 'live_world_aisstream_api_key', '' ) or '' )
+          \tthrow_if( 'live_world_aisstream_api_key', api_key )
+          \tradius = float( st.session_state[ 'live_world_vessel_radius' ] )
+          \tlimit = int( st.session_state[ 'live_world_vessel_limit' ] )
+          \tservice = AisStreamLive( api_key=api_key, timeout=5 )
+          \tresult = service.fetch_positions( latitude=latitude, longitude=longitude,
+          \t\tradius_degrees=radius, max_messages=limit, duration_seconds=3.0 )
+          \tentities_by_mmsi: Dict[ str, GeoEntity ] = { }
+
+          \tfor index, envelope in enumerate( result ):
+          \t\tmetadata_source = envelope.get( 'MetaData', { } ) or { }
+          \t\tmessage_type = str( envelope.get( 'MessageType', '' ) or '' )
+          \t\tmessage = envelope.get( 'Message', { } ) or { }
+          \t\tbody = message.get( message_type, { } ) or { }
+          \t\tlatitude_value = metadata_source.get( 'Latitude', body.get( 'Latitude', None ) )
+          \t\tlongitude_value = metadata_source.get( 'Longitude', body.get( 'Longitude', None ) )
+          \t\tif latitude_value is None or longitude_value is None:
+          \t\t\tcontinue
+
+          \t\ttry:
+          \t\t\tlat = float( latitude_value )
+          \t\t\tlon = float( longitude_value )
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\tcontinue
+
+          \t\tmmsi = str( metadata_source.get( 'MMSI', body.get( 'UserID', '' ) ) or '' )
+          \t\tship_name = str( metadata_source.get( 'ShipName', '' ) or '' ).strip( )
+          \t\tspeed_knots = body.get( 'Sog', 0.0 )
+          \t\theading = body.get( 'TrueHeading', body.get( 'Cog', 0.0 ) )
+          \t\ttry:
+          \t\t\tspeed_mps = float( speed_knots ) * 0.514444 if speed_knots is not None else 0.0
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\tspeed_mps = 0.0
+          \t\ttry:
+          \t\t\theading_value = float( heading ) if heading is not None else 0.0
+          \t\texcept ( TypeError, ValueError ):
+          \t\t\theading_value = 0.0
+
+          \t\tmetadata = {
+          \t\t\t'MMSI': mmsi,
+          \t\t\t'Message Type': message_type,
+          \t\t\t'Speed Over Ground (kt)': speed_knots,
+          \t\t\t'Course Over Ground': body.get( 'Cog', None ),
+          \t\t\t'True Heading': body.get( 'TrueHeading', None ),
+          \t\t\t'Navigational Status': body.get( 'NavigationalStatus', None ),
+          \t\t\t'Position Accuracy': body.get( 'PositionAccuracy', None ),
+          \t\t\t'RAIM': body.get( 'Raim', None ),
+          \t\t}
+          \t\tentity_id = mmsi or f'AIS-{index + 1}'
+          \t\tentities_by_mmsi[ entity_id ] = GeoEntity(
+          \t\t\tentity_id=entity_id,
+          \t\t\tentity_type='Vessel',
+          \t\t\tname=ship_name or entity_id,
+          \t\t\tlatitude=lat,
+          \t\t\tlongitude=lon,
+          \t\t\taltitude=0.0,
+          \t\t\theading=heading_value,
+          \t\t\tspeed=speed_mps,
+          \t\t\ttimestamp=dt.datetime.now( dt.timezone.utc ).isoformat( ),
+          \t\t\tsource='AIS Stream',
+          \t\t\tmetadata=metadata )
+
+          \tst.session_state[ 'live_world_vessel_result' ] = result
+          \treturn entities_to_dataframe( list( entities_by_mmsi.values( ) ) )
+          """
+          text = text.replace( marker, functions + marker, 1 )
+
+          replace_once(
+              """\tdf_tracking = df_entities[ df_entities[ 'EntityType' ].isin(
+          \t\t[ 'Aircraft', 'Satellite' ] ) ].copy( )
+          """,
+              """\tdf_tracking = df_entities[ df_entities[ 'EntityType' ].isin(
+          \t\t[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel' ] ) ].copy( )
+          """,
+              'Tracking types' )
+
+          replace_once(
+              """\t\telse:
+          \t\t\tst.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_satellites' ]:
+          """,
+              """\t\telse:
+          \t\t\tst.session_state[ 'live_world_df_aircraft' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_military_aircraft' ]:
+          \t\t\tdf_military = fetch_live_military_aircraft( latitude, longitude )
+          \t\t\tst.session_state[ 'live_world_df_military_aircraft' ] = df_military
+          \t\t\tif not df_military.empty:
+          \t\t\t\tframes.append( df_military )
+          \t\telse:
+          \t\t\tst.session_state[ 'live_world_df_military_aircraft' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_satellites' ]:
+          """,
+              'Military refresh' )
+
+          replace_once(
+              """\t\telse:
+          \t\t\tst.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_earthquakes' ]:
+          """,
+              """\t\telse:
+          \t\t\tst.session_state[ 'live_world_df_satellites' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_vessels' ]:
+          \t\t\tdf_vessels = fetch_live_vessels( latitude, longitude )
+          \t\t\tst.session_state[ 'live_world_df_vessels' ] = df_vessels
+          \t\t\tif not df_vessels.empty:
+          \t\t\t\tframes.append( df_vessels )
+          \t\telse:
+          \t\t\tst.session_state[ 'live_world_df_vessels' ] = pd.DataFrame( )
+
+          \t\tif st.session_state[ 'live_world_earthquakes' ]:
+          """,
+              'Vessel refresh' )
+
+          replace_once(
+              """\tmetric_c1, metric_c2, metric_c3, metric_c4, metric_c5 = st.columns( 5, border=True )
+          \tmetric_c1.metric( 'Entities', f'{len( df_map ):,}' )
+          \tmetric_c2.metric( 'Aircraft',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Aircraft\").sum( ) ):,}' )
+          \tmetric_c3.metric( 'Satellites',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Satellite\").sum( ) ):,}' )
+          \tmetric_c4.metric( 'Earthquakes',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Earthquake\").sum( ) ):,}' )
+          \tmetric_c5.metric( 'Fires', f'{int( (df_map[ \"EntityType\" ] == \"Fire\").sum( ) ):,}' )
+          """,
+              """\tmetric_c1, metric_c2, metric_c3, metric_c4, metric_c5 = st.columns( 5, border=True )
+          \tmetric_c1.metric( 'Entities', f'{len( df_map ):,}' )
+          \tmetric_c2.metric( 'Aircraft',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Aircraft\").sum( ) ):,}' )
+          \tmetric_c3.metric( 'Military',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Military Aircraft\").sum( ) ):,}' )
+          \tmetric_c4.metric( 'Satellites',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Satellite\").sum( ) ):,}' )
+          \tmetric_c5.metric( 'Vessels',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Vessel\").sum( ) ):,}' )
+          \tevent_c1, event_c2 = st.columns( 2, border=True )
+          \tevent_c1.metric( 'Earthquakes',
+          \t\tf'{int( (df_map[ \"EntityType\" ] == \"Earthquake\").sum( ) ):,}' )
+          \tevent_c2.metric( 'Fires', f'{int( (df_map[ \"EntityType\" ] == \"Fire\").sum( ) ):,}' )
+          """,
+              'Metrics' )
+
+          replace_once(
+              """\tdf_aircraft = df_map[ df_map[ 'EntityType' ] == 'Aircraft' ].copy( )
+          \tdf_satellites = df_map[ df_map[ 'EntityType' ] == 'Satellite' ].copy( )
+          """,
+              """\tdf_aircraft = df_map[ df_map[ 'EntityType' ] == 'Aircraft' ].copy( )
+          \tdf_military = df_map[ df_map[ 'EntityType' ] == 'Military Aircraft' ].copy( )
+          \tdf_satellites = df_map[ df_map[ 'EntityType' ] == 'Satellite' ].copy( )
+          \tdf_vessels = df_map[ df_map[ 'EntityType' ] == 'Vessel' ].copy( )
+          """,
+              'Map dataframes' )
+
+          replace_once(
+              """\tif not df_satellites.empty:
+          \t\tdf_satellites[ 'Radius' ] = 8500.0 * point_scale
+          """,
+              """\tif not df_military.empty:
+          \t\tdf_military[ 'Radius' ] = 8500.0 * point_scale
+          \t\tlayers.append( pdk.Layer(
+          \t\t\t'ScatterplotLayer', data=df_military,
+          \t\t\tget_position='[Longitude, Latitude]', get_radius='Radius',
+          \t\t\tget_fill_color=[ 255, 45, 85, 225 ], get_line_color=[ 255, 220, 225, 245 ],
+          \t\t\tline_width_min_pixels=2, radius_min_pixels=6, radius_max_pixels=30,
+          \t\t\tfilled=True, stroked=True, pickable=True ) )
+
+          \tif not df_satellites.empty:
+          \t\tdf_satellites[ 'Radius' ] = 8500.0 * point_scale
+          """,
+              'Military map layer' )
+
+          replace_once(
+              """\tif not df_earthquakes.empty:
+          \t\tdf_earthquakes[ 'Magnitude' ] = df_earthquakes[ 'Metadata' ].map(
+          """,
+              """\tif not df_vessels.empty:
+          \t\tdf_vessels[ 'Radius' ] = 7500.0 * point_scale
+          \t\tlayers.append( pdk.Layer(
+          \t\t\t'ScatterplotLayer', data=df_vessels,
+          \t\t\tget_position='[Longitude, Latitude]', get_radius='Radius',
+          \t\t\tget_fill_color=[ 0, 210, 190, 220 ], get_line_color=[ 210, 255, 250, 240 ],
+          \t\t\tline_width_min_pixels=1, radius_min_pixels=5, radius_max_pixels=28,
+          \t\t\tfilled=True, stroked=True, pickable=True ) )
+
+          \tif not df_earthquakes.empty:
+          \t\tdf_earthquakes[ 'Magnitude' ] = df_earthquakes[ 'Metadata' ].map(
+          """,
+              'Vessel map layer' )
+
+          replace_once(
+              """\tentities_tab, aircraft_tab, satellites_tab, earthquakes_tab, fires_tab, tracking_tab = st.tabs(
+          \t\t[ '🌐 Entities', '✈️ Aircraft', '🛰️ Satellites', '📈 Earthquakes', '🔥 Fires',
+          \t\t\t'🎯 Tracking' ] )
+          """,
+              """\tentities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab = st.tabs(
+          \t\t[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
+          \t\t\t'📈 Earthquakes', '🔥 Fires', '🎯 Tracking' ] )
+          """,
+              'Tabs' )
+
+          replace_once(
+              """\twith satellites_tab:
+          \t\tdf_satellite_records = st.session_state.get( 'live_world_df_satellites', pd.DataFrame( ) )
+          """,
+              """\twith military_tab:
+          \t\tdf_military_records = st.session_state.get(
+          \t\t\t'live_world_df_military_aircraft', pd.DataFrame( ) )
+          \t\tif df_military_records is None or df_military_records.empty:
+          \t\t\tst.info( 'No military aircraft records loaded.' )
+          \t\telse:
+          \t\t\tst.data_editor( make_live_world_display_frame( df_military_records ),
+          \t\t\t\tkey='live_world_military_aircraft_table', use_container_width=True,
+          \t\t\t\tdisabled=True, hide_index=True )
+
+          \twith satellites_tab:
+          \t\tdf_satellite_records = st.session_state.get( 'live_world_df_satellites', pd.DataFrame( ) )
+          """,
+              'Military tab body' )
+
+          replace_once(
+              """\twith earthquakes_tab:
+          \t\tdf_quakes = st.session_state.get( 'live_world_df_earthquakes', pd.DataFrame( ) )
+          """,
+              """\twith vessels_tab:
+          \t\tdf_vessel_records = st.session_state.get( 'live_world_df_vessels', pd.DataFrame( ) )
+          \t\tif df_vessel_records is None or df_vessel_records.empty:
+          \t\t\tst.info( 'No vessel records loaded.' )
+          \t\telse:
+          \t\t\tst.data_editor( make_live_world_display_frame( df_vessel_records ),
+          \t\t\t\tkey='live_world_vessel_table', use_container_width=True,
+          \t\t\t\tdisabled=True, hide_index=True )
+
+          \twith earthquakes_tab:
+          \t\tdf_quakes = st.session_state.get( 'live_world_df_earthquakes', pd.DataFrame( ) )
+          """,
+              'Vessel tab body' )
+
+          replace_once(
+              "st.info( 'No tracking trail has been recorded. Select an aircraft or satellite and Refresh.' )",
+              "st.info( 'No tracking trail has been recorded. Select a moving entity and Refresh.' )",
+              'Tracking tab message' )
+
+          text = text.replace(
+              'live aircraft, satellite, earthquake, and active-fire retrieval, normalized geospatial\n    entities, operational PyDeck rendering, entity tracking and trails, refresh controls,',
+              'live aircraft, military aircraft, satellite, vessel, earthquake, and active-fire retrieval,\n    normalized geospatial entities, operational PyDeck rendering, entity tracking and trails,\n    refresh controls,',
+              1 )
+
+          path.write_text( text, encoding='utf-8' )
+          PY
+
+      - name: Compile Python sources
+        run: python -m py_compile app.py live_world.py live_world_sources.py
+
+      - name: Commit implementation
+        shell: bash
+        run: |
+          git config user.name "Terry Eppler"
+          git config user.email "terry.eppler@gmail.com"
+          git add live_world.py
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Implement military aircraft and vessel layers"
+          git push origin feature/live-world-military-vessels
