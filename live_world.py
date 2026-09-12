@@ -559,12 +559,14 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_df_vessels' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_earthquakes' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_aircraft_result' ] = { }
 	st.session_state[ 'live_world_military_aircraft_result' ] = { }
 	st.session_state[ 'live_world_satellite_result' ] = [ ]
 	st.session_state[ 'live_world_vessel_result' ] = [ ]
 	st.session_state[ 'live_world_earthquake_result' ] = { }
 	st.session_state[ 'live_world_firms_result' ] = { }
+	st.session_state[ 'live_world_infrastructure_result' ] = { }
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
 	st.session_state[ 'live_world_annotations' ] = [ ]
