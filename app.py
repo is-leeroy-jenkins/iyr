@@ -3252,8 +3252,7 @@ with st.sidebar:
 					""",
 					connection )
 				
-				df_default = pd.read_sql_query( f'SELECT * FROM "{cfg.DEFAULT_DATA}"',
-					connection )
+				df_default = pd.read_sql_query( f'SELECT * FROM "{cfg.DEFAULT_DATA}"', connection )
 				
 				df_original = df_default.copy( )
 				log_step( f'Loaded Database Table: {cfg.DEFAULT_DATA}' )
