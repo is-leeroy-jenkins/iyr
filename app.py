@@ -3323,6 +3323,47 @@ with st.sidebar:
 	set_blue_divider( )
 	st.markdown( '#### 🔒 Credentials' )
 	with st.expander( label='API', expanded=False ):
+		init_env_state( 'openai_api_key', 'OPENAI_API_KEY', 'OPENAI_API_KEY' )
+		init_env_state( 'gemini_api_key', 'GEMINI_API_KEY', 'GEMINI_API_KEY' )
+		init_env_state( 'xai_api_key', 'XAI_API_KEY', 'XAI_API_KEY' )
+		init_env_state( 'claude_api_key', 'CLAUDE_API_KEY', 'CLAUDE_API_KEY' )
+		init_env_state( 'mistral_api_key', 'MISTRAL_API_KEY', 'MISTRAL_API_KEY' )
+
+		openai_key = st.text_input( 'OpenAI API Key', type='password',
+			value=st.session_state.openai_api_key or '',
+			help='Overrides OPENAI_API_KEY from config.py for this session only.' )
+		if openai_key:
+			st.session_state.openai_api_key = openai_key
+			os.environ[ 'OPENAI_API_KEY' ] = openai_key
+
+		gemini_key = st.text_input( 'Gemini API Key', type='password',
+			value=st.session_state.gemini_api_key or '',
+			help='Overrides GEMINI_API_KEY from config.py for this session only.' )
+		if gemini_key:
+			st.session_state.gemini_api_key = gemini_key
+			os.environ[ 'GEMINI_API_KEY' ] = gemini_key
+
+		xai_key = st.text_input( 'Grok / xAI API Key', type='password',
+			value=st.session_state.xai_api_key or '',
+			help='Overrides XAI_API_KEY from config.py for this session only.' )
+		if xai_key:
+			st.session_state.xai_api_key = xai_key
+			os.environ[ 'XAI_API_KEY' ] = xai_key
+
+		claude_key = st.text_input( 'Claude API Key', type='password',
+			value=st.session_state.claude_api_key or '',
+			help='Overrides CLAUDE_API_KEY from config.py for this session only.' )
+		if claude_key:
+			st.session_state.claude_api_key = claude_key
+			os.environ[ 'CLAUDE_API_KEY' ] = claude_key
+
+		mistral_key = st.text_input( 'Mistral API Key', type='password',
+			value=st.session_state.mistral_api_key or '',
+			help='Overrides MISTRAL_API_KEY from config.py for this session only.' )
+		if mistral_key:
+			st.session_state.mistral_api_key = mistral_key
+			os.environ[ 'MISTRAL_API_KEY' ] = mistral_key
+
 		google_key = st.text_input( 'Google API Key', type='password',
 			value=st.session_state.google_api_key or '',
 			help='Overrides GOOGLE_API_KEY from config.py for this session only.' )
