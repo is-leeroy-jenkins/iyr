@@ -33,7 +33,7 @@ Clone the repository and install dependencies:
 
 ### 1. Initialize Maps
 ```
-    from ayin import Maps
+    from iyrin import Maps
 
     maps = Maps(api_key="YOUR_API_KEY")
 ```
@@ -41,7 +41,7 @@ Clone the repository and install dependencies:
 ### 2. Geocode an address
 
 ```    
-    from ayin import Geocoder
+    from iyrin import Geocoder
 
     geo = Geocoder(maps)
     result = geo.freeform("Paris, France")
@@ -51,7 +51,7 @@ Clone the repository and install dependencies:
 ### 3. Calculate distance
 
 ```    
-    from ayin import DistanceMatrix
+    from iyrin import DistanceMatrix
 
     dist = DistanceMatrix(maps)
     d = dist.summary("New York, USA", "Los Angeles, USA", mode="driving")
@@ -61,7 +61,7 @@ Clone the repository and install dependencies:
 ### 4. Get a static map URL
 
 ```    
-    from ayin import StaticMapURL
+    from iyrin import StaticMapURL
 
     sm = StaticMapURL(api_key="YOUR_API_KEY")
     url = sm.pin(lat=48.8584, lng=2.2945, zoom=14)
@@ -71,7 +71,7 @@ Clone the repository and install dependencies:
 ### 5. Process Excel locations
 
 ```    
-    from ayin import Excel
+    from iyrin import Excel
 
     excel = Excel(api_key="YOUR_API_KEY")
     excel.enrich(
@@ -86,7 +86,7 @@ Clone the repository and install dependencies:
 
 ## 📂 Project Structure
 
-    ayin/
+    iyrin/
      ├── __init__.py        # Public interface
      ├── maps.py            # Maps (API gateway)
      ├── geocode.py         # Address → coordinates
@@ -133,7 +133,7 @@ Clone the repository and install dependencies:
 
 ## 📜 License
 
-ayin is available via the MIT License [here](https://github.com/is-leeroy-jenkins/ayin/blob/master/LICENSE.txt).  
+iyrin is available via the MIT License [here](https://github.com/is-leeroy-jenkins/iyrin/blob/master/LICENSE.txt).  
 
 
 
