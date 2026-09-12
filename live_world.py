@@ -44,12 +44,12 @@ LIVE_WORLD_LAYERS: Dict[ str, str ] = {
 	'earthquakes': '📈 Earthquakes',
 	'fires': '🔥 Fires (Wildfires)',
 	'tracking': '🎯 Tracking & Trails',
+	'measurements': '📏 Measurements & Annotations',
 }
 
 LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
 	'cameras': '📷 CCTV / Web Cameras',
 	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
-	'measurements': '📏 Measurements & Annotations',
 	'map_layers': '🗺️ Additional Map Layers',
 }
 
@@ -160,6 +160,17 @@ def initialize_live_world_state( ) -> None:
 		'live_world_tracking_follow': True,
 		'live_world_tracking_max_points': 100,
 		'live_world_tracking_history': [ ],
+		'live_world_measurements': False,
+		'live_world_measurement_start': 'Current Location',
+		'live_world_measurement_end': 'Current Location',
+		'live_world_measurement_custom_start_latitude': 0.0,
+		'live_world_measurement_custom_start_longitude': 0.0,
+		'live_world_measurement_custom_end_latitude': 0.0,
+		'live_world_measurement_custom_end_longitude': 0.0,
+		'live_world_annotation_label': '',
+		'live_world_annotation_latitude': 0.0,
+		'live_world_annotation_longitude': 0.0,
+		'live_world_annotations': [ ],
 		'live_world_refresh_requested': False,
 		'live_world_last_refresh': '',
 		'live_world_last_error': '',
@@ -281,6 +292,59 @@ def render_live_world_sidebar( ) -> None:
 			st.selectbox( 'Fire Area', options=[ 'Local Bounding Box', 'World' ],
 				key='live_world_firms_area_mode' )
 
+		st.checkbox( LIVE_WORLD_LAYERS[ 'measurements' ], key='live_world_measurements' )
+		if st.session_state[ 'live_world_measurements' ]:
+			measurement_options = get_live_world_measurement_options( )
+			measurement_keys = list( measurement_options.keys( ) )
+			if st.session_state[ 'live_world_measurement_start' ] not in measurement_keys:
+				st.session_state[ 'live_world_measurement_start' ] = 'Current Location'
+			if st.session_state[ 'live_world_measurement_end' ] not in measurement_keys:
+				st.session_state[ 'live_world_measurement_end' ] = 'Current Location'
+			measure_c1, measure_c2 = st.columns( 2 )
+			with measure_c1:
+				st.selectbox( 'Measure From', options=measurement_keys,
+					format_func=lambda value: measurement_options[ value ],
+					key='live_world_measurement_start' )
+			with measure_c2:
+				st.selectbox( 'Measure To', options=measurement_keys,
+					format_func=lambda value: measurement_options[ value ],
+					key='live_world_measurement_end' )
+			if st.session_state[ 'live_world_measurement_start' ] == 'Custom Point':
+				custom_start_c1, custom_start_c2 = st.columns( 2 )
+				with custom_start_c1:
+					st.number_input( 'Start Latitude', min_value=-90.0, max_value=90.0,
+						format='%.6f', key='live_world_measurement_custom_start_latitude' )
+				with custom_start_c2:
+					st.number_input( 'Start Longitude', min_value=-180.0, max_value=180.0,
+						format='%.6f', key='live_world_measurement_custom_start_longitude' )
+			if st.session_state[ 'live_world_measurement_end' ] == 'Custom Point':
+				custom_end_c1, custom_end_c2 = st.columns( 2 )
+				with custom_end_c1:
+					st.number_input( 'End Latitude', min_value=-90.0, max_value=90.0,
+						format='%.6f', key='live_world_measurement_custom_end_latitude' )
+				with custom_end_c2:
+					st.number_input( 'End Longitude', min_value=-180.0, max_value=180.0,
+						format='%.6f', key='live_world_measurement_custom_end_longitude' )
+
+			st.caption( 'Annotations' )
+			st.text_input( 'Annotation Label', key='live_world_annotation_label' )
+			annotation_c1, annotation_c2 = st.columns( 2 )
+			with annotation_c1:
+				st.number_input( 'Annotation Latitude', min_value=-90.0, max_value=90.0,
+					format='%.6f', key='live_world_annotation_latitude' )
+			with annotation_c2:
+				st.number_input( 'Annotation Longitude', min_value=-180.0, max_value=180.0,
+					format='%.6f', key='live_world_annotation_longitude' )
+			annotation_button_c1, annotation_button_c2 = st.columns( 2 )
+			with annotation_button_c1:
+				if st.button( 'Add Annotation', icon='📍', key='live_world_annotation_add',
+						width='stretch' ):
+					add_live_world_annotation( )
+			with annotation_button_c2:
+				if st.button( 'Clear Annotations', icon='🧹', key='live_world_annotation_clear',
+						width='stretch' ):
+					clear_live_world_annotations( )
+
 		st.checkbox( LIVE_WORLD_LAYERS[ 'tracking' ], key='live_world_tracking' )
 		if st.session_state[ 'live_world_tracking' ]:
 			tracking_options = get_live_world_tracking_options( )
@@ -349,6 +413,7 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_firms_result' ] = { }
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
+	st.session_state[ 'live_world_annotations' ] = [ ]
 	st.session_state[ 'live_world_last_refresh' ] = ''
 	st.session_state[ 'live_world_last_error' ] = ''
 	st.session_state[ 'live_world_refresh_requested' ] = False
@@ -1009,6 +1074,195 @@ def get_live_world_tracking_options( ) -> Dict[ str, str ]:
 	return options
 
 
+
+
+def get_live_world_measurement_options( ) -> Dict[ str, str ]:
+	'''
+
+		Purpose:
+		--------
+		Return selectable measurement endpoints from current location and loaded entities.
+
+		Returns:
+		--------
+		Dict[str, str]: Measurement endpoint keys mapped to display labels.
+
+	'''
+	initialize_live_world_state( )
+	options: Dict[ str, str ] = {
+		'Current Location': 'Current Location',
+		'Custom Point': 'Custom Point',
+	}
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	if df_entities is None or df_entities.empty:
+		return options
+	for _, row in df_entities.iterrows( ):
+		entity_id = str( row[ 'EntityId' ] )
+		entity_type = str( row[ 'EntityType' ] )
+		name = str( row[ 'Name' ] )
+		key = f'Entity::{entity_type}::{entity_id}'
+		options[ key ] = f'{entity_type} | {name} | {entity_id}'
+	return options
+
+
+def resolve_live_world_measurement_point( key: str, latitude: float,
+		longitude: float, endpoint: str ) -> Dict[ str, object ]:
+	'''
+
+		Purpose:
+		--------
+		Resolve one configured measurement endpoint into coordinates and a display label.
+
+		Parameters:
+		-----------
+		key (str): Selected endpoint key.
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+		endpoint (str): Endpoint selector, either start or end.
+
+		Returns:
+		--------
+		Dict[str, object]: Resolved endpoint label and coordinates.
+
+	'''
+	throw_if( 'key', key )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	throw_if( 'endpoint', endpoint )
+	if key == 'Current Location':
+		return { 'Label': 'Current Location', 'Latitude': float( latitude ),
+			'Longitude': float( longitude ) }
+	if key == 'Custom Point':
+		if endpoint == 'start':
+			return {
+				'Label': 'Custom Start',
+				'Latitude': float( st.session_state[ 'live_world_measurement_custom_start_latitude' ] ),
+				'Longitude': float( st.session_state[ 'live_world_measurement_custom_start_longitude' ] ),
+			}
+		return {
+			'Label': 'Custom End',
+			'Latitude': float( st.session_state[ 'live_world_measurement_custom_end_latitude' ] ),
+			'Longitude': float( st.session_state[ 'live_world_measurement_custom_end_longitude' ] ),
+		}
+	if not key.startswith( 'Entity::' ):
+		raise ValueError( f'Unknown measurement endpoint: {key}' )
+	_, entity_type, entity_id = key.split( '::', 2 )
+	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
+	df_match = df_entities[
+		(df_entities[ 'EntityType' ].astype( str ) == entity_type)
+		& (df_entities[ 'EntityId' ].astype( str ) == entity_id) ].copy( )
+	if df_match.empty:
+		raise ValueError( f'Measurement entity is no longer available: {entity_id}' )
+	row = df_match.iloc[ 0 ]
+	return {
+		'Label': f'{entity_type} | {row[ "Name" ]}',
+		'Latitude': float( row[ 'Latitude' ] ),
+		'Longitude': float( row[ 'Longitude' ] ),
+	}
+
+
+def calculate_live_world_measurement( latitude: float, longitude: float ) -> Dict[ str, object ]:
+	'''
+
+		Purpose:
+		--------
+		Calculate distance and initial bearing between the configured measurement endpoints.
+
+		Parameters:
+		-----------
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+
+		Returns:
+		--------
+		Dict[str, object]: Resolved endpoints, distances, and initial bearing.
+
+	'''
+	start = resolve_live_world_measurement_point(
+		str( st.session_state[ 'live_world_measurement_start' ] ), latitude, longitude, 'start' )
+	end = resolve_live_world_measurement_point(
+		str( st.session_state[ 'live_world_measurement_end' ] ), latitude, longitude, 'end' )
+	distance_nm = calculate_live_world_distance_nm(
+		float( start[ 'Latitude' ] ), float( start[ 'Longitude' ] ),
+		float( end[ 'Latitude' ] ), float( end[ 'Longitude' ] ) )
+	lat_a = math.radians( float( start[ 'Latitude' ] ) )
+	lat_b = math.radians( float( end[ 'Latitude' ] ) )
+	delta_lon = math.radians( float( end[ 'Longitude' ] ) - float( start[ 'Longitude' ] ) )
+	y = math.sin( delta_lon ) * math.cos( lat_b )
+	x = (math.cos( lat_a ) * math.sin( lat_b )
+		- math.sin( lat_a ) * math.cos( lat_b ) * math.cos( delta_lon ))
+	bearing = (math.degrees( math.atan2( y, x ) ) + 360.0) % 360.0
+	return {
+		'Start': start,
+		'End': end,
+		'DistanceNM': distance_nm,
+		'DistanceKM': distance_nm * 1.852,
+		'DistanceMiles': distance_nm * 1.150779448,
+		'Bearing': bearing,
+	}
+
+
+def add_live_world_annotation( ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Add one labeled annotation to the in-session Live World annotation collection.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	label = str( st.session_state.get( 'live_world_annotation_label', '' ) or '' ).strip( )
+	throw_if( 'live_world_annotation_label', label )
+	latitude = float( st.session_state[ 'live_world_annotation_latitude' ] )
+	longitude = float( st.session_state[ 'live_world_annotation_longitude' ] )
+	annotations = list( st.session_state.get( 'live_world_annotations', [ ] ) or [ ] )
+	annotations.append( {
+		'AnnotationId': f'ANNOTATION-{len( annotations ) + 1}',
+		'Label': label,
+		'Latitude': latitude,
+		'Longitude': longitude,
+		'CreatedAt': dt.datetime.now( dt.timezone.utc ).isoformat( ),
+	} )
+	st.session_state[ 'live_world_annotations' ] = annotations
+
+
+def clear_live_world_annotations( ) -> None:
+	'''
+
+		Purpose:
+		--------
+		Clear all in-session Live World annotations.
+
+		Returns:
+		--------
+		None
+
+	'''
+	initialize_live_world_state( )
+	st.session_state[ 'live_world_annotations' ] = [ ]
+
+
+def get_live_world_annotation_frame( ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Return current Live World annotations as a DataFrame.
+
+		Returns:
+		--------
+		pd.DataFrame: Annotation records.
+
+	'''
+	initialize_live_world_state( )
+	columns = [ 'AnnotationId', 'Label', 'Latitude', 'Longitude', 'CreatedAt' ]
+	return pd.DataFrame( st.session_state.get( 'live_world_annotations', [ ] ) or [ ],
+		columns=columns )
+
 def clear_live_world_tracking( ) -> None:
 	'''
 
@@ -1235,8 +1489,10 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 
 	df_entities = st.session_state.get( 'live_world_df_entities', pd.DataFrame( ) )
 	if df_entities is None or df_entities.empty:
-		st.info( 'No Live World data has been loaded. Select Refresh in the sidebar.' )
-		return
+		if not st.session_state[ 'live_world_measurements' ]:
+			st.info( 'No Live World data has been loaded. Select Refresh in the sidebar.' )
+			return
+		df_entities = entities_to_dataframe( [ ] )
 
 	df_map = df_entities.copy( )
 	df_map[ 'MetadataText' ] = df_map[ 'Metadata' ].map(
@@ -1244,7 +1500,7 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 	df_map[ 'Latitude' ] = pd.to_numeric( df_map[ 'Latitude' ], errors='coerce' )
 	df_map[ 'Longitude' ] = pd.to_numeric( df_map[ 'Longitude' ], errors='coerce' )
 	df_map = df_map.dropna( subset=[ 'Latitude', 'Longitude' ] )
-	if df_map.empty:
+	if df_map.empty and not st.session_state[ 'live_world_measurements' ]:
 		st.info( 'Live World data does not contain usable map coordinates.' )
 		return
 
@@ -1350,6 +1606,43 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			line_width_min_pixels=1, radius_min_pixels=4, radius_max_pixels=28,
 			filled=True, stroked=True, pickable=True ) )
 
+	df_measurement = pd.DataFrame( )
+	measurement_result: Dict[ str, object ] = { }
+	if st.session_state[ 'live_world_measurements' ]:
+		try:
+			measurement_result = calculate_live_world_measurement( latitude, longitude )
+			start = measurement_result[ 'Start' ]
+			end = measurement_result[ 'End' ]
+			df_measurement = pd.DataFrame( [ start, end ] )
+			path_data = [ { 'Path': [
+				[ float( start[ 'Longitude' ] ), float( start[ 'Latitude' ] ) ],
+				[ float( end[ 'Longitude' ] ), float( end[ 'Latitude' ] ) ] ] } ]
+			layers.append( pdk.Layer( 'PathLayer', data=path_data, get_path='Path',
+				get_color=[ 255, 255, 255, 230 ], get_width=4,
+				width_min_pixels=2, width_max_pixels=7, pickable=False ) )
+			df_measurement[ 'Radius' ] = 10000.0 * point_scale
+			layers.append( pdk.Layer( 'ScatterplotLayer', data=df_measurement,
+				get_position='[Longitude, Latitude]', get_radius='Radius',
+				get_fill_color=[ 255, 255, 255, 80 ], get_line_color=[ 255, 255, 255, 255 ],
+				line_width_min_pixels=2, radius_min_pixels=7, radius_max_pixels=28,
+				filled=True, stroked=True, pickable=False ) )
+		except Exception as ex:
+			measurement_result = { 'Error': str( ex ) }
+
+	df_annotations = get_live_world_annotation_frame( )
+	if st.session_state[ 'live_world_measurements' ] and not df_annotations.empty:
+		df_annotation_points = df_annotations.copy( )
+		df_annotation_points[ 'Radius' ] = 9000.0 * point_scale
+		layers.append( pdk.Layer( 'ScatterplotLayer', data=df_annotation_points,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 255, 210, 0, 180 ], get_line_color=[ 255, 255, 255, 255 ],
+			line_width_min_pixels=2, radius_min_pixels=7, radius_max_pixels=28,
+			filled=True, stroked=True, pickable=True ) )
+		layers.append( pdk.Layer( 'TextLayer', data=df_annotations,
+			get_position='[Longitude, Latitude]', get_text='Label', get_size=14,
+			get_color=[ 255, 255, 255, 255 ], get_angle=0,
+			get_text_anchor='middle', get_alignment_baseline='bottom', pickable=False ) )
+
 	df_tracking = get_live_world_tracking_frame( )
 	if st.session_state[ 'live_world_tracking' ] and not df_tracking.empty:
 		if len( df_tracking ) > 1:
@@ -1400,9 +1693,9 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab = st.tabs(
+	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab = st.tabs(
 		[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
-			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking' ] )
+			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking', '📏 Measurements' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -1473,6 +1766,28 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			tracking_c3.metric( 'Type', str( df_tracking.iloc[ -1 ][ 'EntityType' ] ) )
 			st.data_editor( df_tracking, key='live_world_tracking_table',
 				use_container_width=True, disabled=True, hide_index=True )
+
+
+	with measurements_tab:
+		if not st.session_state[ 'live_world_measurements' ]:
+			st.info( 'Enable Measurements & Annotations in the sidebar.' )
+		else:
+			if 'Error' in measurement_result:
+				st.error( f'Measurement failed: {measurement_result[ "Error" ]}' )
+			elif measurement_result:
+				measure_c1, measure_c2, measure_c3, measure_c4 = st.columns( 4, border=True )
+				measure_c1.metric( 'Nautical Miles', f'{measurement_result[ "DistanceNM" ]:,.2f}' )
+				measure_c2.metric( 'Kilometers', f'{measurement_result[ "DistanceKM" ]:,.2f}' )
+				measure_c3.metric( 'Miles', f'{measurement_result[ "DistanceMiles" ]:,.2f}' )
+				measure_c4.metric( 'Bearing', f'{measurement_result[ "Bearing" ]:,.1f}°' )
+				st.data_editor( df_measurement, key='live_world_measurement_table',
+					use_container_width=True, disabled=True, hide_index=True )
+			st.caption( 'Annotations' )
+			if df_annotations.empty:
+				st.info( 'No annotations have been added.' )
+			else:
+				st.data_editor( df_annotations, key='live_world_annotation_table',
+					use_container_width=True, disabled=True, hide_index=True )
 
 
 def get_metadata_number( metadata: object, key: str, default: float=0.0 ) -> float:
