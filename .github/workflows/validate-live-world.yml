@@ -1,0 +1,20 @@
+name: Validate Live World Data
+
+on:
+  push:
+    branches:
+      - feature/live-world-data
+    paths:
+      - .github/workflows/validate-live-world.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feature/live-world-data
+
+      - name: Compile Python sources
+        run: python -m py_compile app.py live_world.py live_world_sources.py
