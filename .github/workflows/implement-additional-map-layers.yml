@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/implement-additional-map-layers.yml
       - .github/scripts/implement_additional_map_layers.py
+      - .github/scripts/repair_additional_map_layers_helper.py
 
 jobs:
   implement:
@@ -22,6 +23,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Repair implementation helper
+        run: python .github/scripts/repair_additional_map_layers_helper.py
 
       - name: Implement Additional Map Layers
         run: python .github/scripts/implement_additional_map_layers.py
