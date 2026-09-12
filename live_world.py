@@ -36,7 +36,8 @@ from fetchers import Firms, USGSEarthquakes
 from live_world_history import (
 	clear_live_world_history, get_live_world_history_snapshots, get_live_world_history_summary,
 	load_live_world_history, persist_live_world_history, purge_live_world_history )
-from live_world_sources import AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive
+from live_world_sources import (
+	AdsbLolMilitary, AisStreamLive, CelesTrakLive, OpenSkyLive, OverpassInfrastructure )
 
 
 LIVE_WORLD_LAYERS: Dict[ str, str ] = {
@@ -48,11 +49,11 @@ LIVE_WORLD_LAYERS: Dict[ str, str ] = {
 	'fires': '🔥 Fires (Wildfires)',
 	'tracking': '🎯 Tracking & Trails',
 	'measurements': '📏 Measurements & Annotations',
+	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
 }
 
 LIVE_WORLD_PENDING_LAYERS: Dict[ str, str ] = {
 	'cameras': '📷 CCTV / Web Cameras',
-	'infrastructure': '📡 Infrastructure (Airports, Ports, etc.)',
 	'map_layers': '🗺️ Additional Map Layers',
 }
 
@@ -160,6 +161,11 @@ def initialize_live_world_state( ) -> None:
 		'live_world_firms_source': 'VIIRS_SNPP_NRT',
 		'live_world_firms_day_range': 1,
 		'live_world_firms_area_mode': 'Local Bounding Box',
+		'live_world_infrastructure': False,
+		'live_world_infrastructure_radius_km': 50,
+		'live_world_infrastructure_categories': [
+			'Airports', 'Ports', 'Power Plants', 'Dams', 'Data Centers' ],
+		'live_world_infrastructure_limit': 500,
 		'live_world_tracking': False,
 		'live_world_tracking_entity': '',
 		'live_world_tracking_active_entity': '',
@@ -183,7 +189,8 @@ def initialize_live_world_state( ) -> None:
 		'live_world_analysis_custom_longitude': 0.0,
 		'live_world_analysis_radius_nm': 250,
 		'live_world_analysis_entity_types': [
-			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
+			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
+			'Infrastructure' ],
 		'live_world_analysis_limit': 100,
 		'live_world_geofencing': False,
 		'live_world_geofence_origin': 'Current Location',
@@ -191,7 +198,8 @@ def initialize_live_world_state( ) -> None:
 		'live_world_geofence_custom_longitude': 0.0,
 		'live_world_geofence_radius_nm': 50,
 		'live_world_geofence_entity_types': [
-			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
+			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
+			'Infrastructure' ],
 		'live_world_geofence_event_limit': 100,
 		'live_world_geofence_events': [ ],
 		'live_world_geofence_snapshot': { },
@@ -202,7 +210,8 @@ def initialize_live_world_state( ) -> None:
 		'live_world_history_retention_days': 30,
 		'live_world_history_window': '24 Hours',
 		'live_world_history_entity_types': [
-			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire' ],
+			'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel', 'Earthquake', 'Fire',
+			'Infrastructure' ],
 		'live_world_history_limit': 5000,
 		'live_world_history_snapshot': '',
 		'live_world_history_last_saved': 0,
@@ -217,12 +226,14 @@ def initialize_live_world_state( ) -> None:
 		'live_world_df_vessels': pd.DataFrame( ),
 		'live_world_df_earthquakes': pd.DataFrame( ),
 		'live_world_df_fires': pd.DataFrame( ),
+		'live_world_df_infrastructure': pd.DataFrame( ),
 		'live_world_aircraft_result': { },
 		'live_world_military_aircraft_result': { },
 		'live_world_satellite_result': [ ],
 		'live_world_vessel_result': [ ],
 		'live_world_earthquake_result': { },
 		'live_world_firms_result': { },
+		'live_world_infrastructure_result': { },
 		'live_world_map_style': 'Carto Dark Matter',
 		'live_world_zoom': 4,
 		'live_world_point_scale': 1.0,
@@ -411,7 +422,19 @@ def render_live_world_sidebar( ) -> None:
 				clear_live_world_data( )
 
 		with st.expander( 'Additional Layers', expanded=False ):
-			st.caption( 'Layers activate as their provider implementations are completed.' )
+			st.checkbox( LIVE_WORLD_LAYERS[ 'infrastructure' ], key='live_world_infrastructure' )
+			if st.session_state[ 'live_world_infrastructure' ]:
+				st.multiselect( 'Infrastructure Categories',
+					options=[ 'Airports', 'Ports', 'Power Plants', 'Dams', 'Data Centers',
+						'Military Installations' ], key='live_world_infrastructure_categories' )
+				infra_c1, infra_c2 = st.columns( 2 )
+				with infra_c1:
+					st.slider( 'Infrastructure Radius (KM)', min_value=10, max_value=250,
+						step=10, key='live_world_infrastructure_radius_km' )
+				with infra_c2:
+					st.slider( 'Infrastructure Limit', min_value=50, max_value=2000,
+						step=50, key='live_world_infrastructure_limit' )
+				st.caption( 'Infrastructure features are retrieved from OpenStreetMap via Overpass.' )
 			for label in LIVE_WORLD_PENDING_LAYERS.values( ):
 				st.checkbox( label, value=False, disabled=True )
 
@@ -439,7 +462,7 @@ def render_live_world_sidebar( ) -> None:
 					step=10, key='live_world_analysis_radius_nm' )
 				st.multiselect( 'Entity Types',
 					options=[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel',
-						'Earthquake', 'Fire' ],
+						'Earthquake', 'Fire', 'Infrastructure' ],
 					key='live_world_analysis_entity_types' )
 				st.slider( 'Analysis Result Limit', min_value=10, max_value=500,
 					step=10, key='live_world_analysis_limit' )
@@ -465,7 +488,7 @@ def render_live_world_sidebar( ) -> None:
 					step=5, key='live_world_geofence_radius_nm' )
 				st.multiselect( 'Geofence Entity Types',
 					options=[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel',
-						'Earthquake', 'Fire' ],
+						'Earthquake', 'Fire', 'Infrastructure' ],
 					key='live_world_geofence_entity_types' )
 				st.slider( 'Geofence Event History', min_value=10, max_value=500,
 					step=10, key='live_world_geofence_event_limit' )
@@ -487,7 +510,7 @@ def render_live_world_sidebar( ) -> None:
 						key='live_world_history_retention_days' )
 				st.multiselect( 'Replay Entity Types',
 					options=[ 'Aircraft', 'Military Aircraft', 'Satellite', 'Vessel',
-						'Earthquake', 'Fire' ], key='live_world_history_entity_types' )
+						'Earthquake', 'Fire', 'Infrastructure' ], key='live_world_history_entity_types' )
 				st.slider( 'Replay Record Limit', min_value=100, max_value=25000, step=100,
 					key='live_world_history_limit' )
 				history_hours = get_live_world_history_window_hours(
@@ -536,12 +559,14 @@ def clear_live_world_data( ) -> None:
 	st.session_state[ 'live_world_df_vessels' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_earthquakes' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
+	st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )
 	st.session_state[ 'live_world_aircraft_result' ] = { }
 	st.session_state[ 'live_world_military_aircraft_result' ] = { }
 	st.session_state[ 'live_world_satellite_result' ] = [ ]
 	st.session_state[ 'live_world_vessel_result' ] = [ ]
 	st.session_state[ 'live_world_earthquake_result' ] = { }
 	st.session_state[ 'live_world_firms_result' ] = { }
+	st.session_state[ 'live_world_infrastructure_result' ] = { }
 	st.session_state[ 'live_world_tracking_history' ] = [ ]
 	st.session_state[ 'live_world_tracking_active_entity' ] = ''
 	st.session_state[ 'live_world_annotations' ] = [ ]
@@ -1107,6 +1132,85 @@ def fetch_live_fires( latitude: float, longitude: float ) -> pd.DataFrame:
 			metadata=metadata ) )
 
 	st.session_state[ 'live_world_firms_result' ] = result
+	return entities_to_dataframe( entities )
+
+
+
+def fetch_live_infrastructure( latitude: float, longitude: float ) -> pd.DataFrame:
+	'''
+
+		Purpose:
+		--------
+		Retrieve public infrastructure features from OpenStreetMap Overpass and normalize
+		them into the Live World GeoEntity contract.
+
+		Parameters:
+		-----------
+		latitude (float): Current Iyr/global latitude.
+		longitude (float): Current Iyr/global longitude.
+
+		Returns:
+		--------
+		pd.DataFrame: Normalized infrastructure entities.
+
+	'''
+	initialize_live_world_state( )
+	throw_if( 'latitude', latitude )
+	throw_if( 'longitude', longitude )
+	categories = list( st.session_state.get( 'live_world_infrastructure_categories', [ ] ) or [ ] )
+	if not categories:
+		return entities_to_dataframe( [ ] )
+	radius_km = float( st.session_state[ 'live_world_infrastructure_radius_km' ] )
+	limit = int( st.session_state[ 'live_world_infrastructure_limit' ] )
+	service = OverpassInfrastructure( timeout=30 )
+	result = service.fetch_infrastructure( latitude, longitude, radius_km, categories, limit )
+	elements = result.get( 'elements', [ ] ) or [ ]
+	entities: List[ GeoEntity ] = [ ]
+	observed_at = dt.datetime.now( dt.timezone.utc ).isoformat( )
+
+	for element in elements:
+		if not isinstance( element, dict ):
+			continue
+		center = element.get( 'center', { } ) or { }
+		latitude_value = element.get( 'lat', center.get( 'lat', None ) )
+		longitude_value = element.get( 'lon', center.get( 'lon', None ) )
+		if latitude_value is None or longitude_value is None:
+			continue
+		try:
+			lat = float( latitude_value )
+			lon = float( longitude_value )
+		except ( TypeError, ValueError ):
+			continue
+		tags = element.get( 'tags', { } ) or { }
+		category = str( element.get( 'InfrastructureCategory', '' ) or 'Infrastructure' )
+		osm_type = str( element.get( 'type', '' ) or '' )
+		osm_id = str( element.get( 'id', '' ) or '' )
+		entity_id = f'OSM-{osm_type}-{osm_id}'
+		name = str( tags.get( 'name', '' ) or tags.get( 'operator', '' ) or f'{category} {osm_id}' )
+		metadata = {
+			'Category': category,
+			'OSM Type': osm_type,
+			'OSM ID': osm_id,
+			'Operator': tags.get( 'operator', '' ),
+			'IATA': tags.get( 'iata', '' ),
+			'ICAO': tags.get( 'icao', '' ),
+			'Website': tags.get( 'website', '' ),
+			'Tags': tags,
+		}
+		entities.append( GeoEntity(
+			entity_id=entity_id,
+			entity_type='Infrastructure',
+			name=name,
+			latitude=lat,
+			longitude=lon,
+			altitude=0.0,
+			heading=0.0,
+			speed=0.0,
+			timestamp=observed_at,
+			source='OpenStreetMap Overpass',
+			metadata=metadata ) )
+
+	st.session_state[ 'live_world_infrastructure_result' ] = result
 	return entities_to_dataframe( entities )
 
 
@@ -2023,6 +2127,14 @@ def refresh_live_world_data( latitude: float, longitude: float ) -> pd.DataFrame
 		else:
 			st.session_state[ 'live_world_df_fires' ] = pd.DataFrame( )
 
+		if st.session_state[ 'live_world_infrastructure' ]:
+			df_infrastructure = fetch_live_infrastructure( latitude, longitude )
+			st.session_state[ 'live_world_df_infrastructure' ] = df_infrastructure
+			if not df_infrastructure.empty:
+				frames.append( df_infrastructure )
+		else:
+			st.session_state[ 'live_world_df_infrastructure' ] = pd.DataFrame( )
+
 		df_entities = pd.concat( frames,
 			ignore_index=True ) if frames else entities_to_dataframe( [ ] )
 		st.session_state[ 'live_world_df_entities' ] = df_entities
@@ -2115,10 +2227,12 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		f'{int( (df_map[ "EntityType" ] == "Satellite").sum( ) ):,}' )
 	metric_c5.metric( 'Vessels',
 		f'{int( (df_map[ "EntityType" ] == "Vessel").sum( ) ):,}' )
-	event_c1, event_c2 = st.columns( 2, border=True )
+	event_c1, event_c2, event_c3 = st.columns( 3, border=True )
 	event_c1.metric( 'Earthquakes',
 		f'{int( (df_map[ "EntityType" ] == "Earthquake").sum( ) ):,}' )
 	event_c2.metric( 'Fires', f'{int( (df_map[ "EntityType" ] == "Fire").sum( ) ):,}' )
+	event_c3.metric( 'Infrastructure',
+		f'{int( (df_map[ "EntityType" ] == "Infrastructure").sum( ) ):,}' )
 	st.caption( f'Last refresh: {last_refresh}' )
 
 	map_style_options = {
@@ -2148,6 +2262,7 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 	df_vessels = df_map[ df_map[ 'EntityType' ] == 'Vessel' ].copy( )
 	df_earthquakes = df_map[ df_map[ 'EntityType' ] == 'Earthquake' ].copy( )
 	df_fires = df_map[ df_map[ 'EntityType' ] == 'Fire' ].copy( )
+	df_infrastructure = df_map[ df_map[ 'EntityType' ] == 'Infrastructure' ].copy( )
 
 	df_analysis = pd.DataFrame( )
 	analysis_origin: Dict[ str, object ] = { }
@@ -2318,6 +2433,13 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			get_color=[ 255, 255, 255, 255 ], get_angle=0,
 			get_text_anchor='middle', get_alignment_baseline='bottom', pickable=False ) )
 
+	if not df_infrastructure.empty:
+		df_infrastructure[ 'Radius' ] = 8500.0 * point_scale
+		layers.append( pdk.Layer( 'ScatterplotLayer', data=df_infrastructure,
+			get_position='[Longitude, Latitude]', get_radius='Radius',
+			get_fill_color=[ 255, 165, 60, 190 ], get_line_color=[ 255, 225, 180, 255 ],
+			line_width_min_pixels=1, stroked=True, pickable=True ) )
+
 	df_tracking = get_live_world_tracking_frame( )
 	if st.session_state[ 'live_world_tracking' ] and not df_tracking.empty:
 		if len( df_tracking ) > 1:
@@ -2407,10 +2529,10 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 		map_style=map_style_options[ st.session_state[ 'live_world_map_style' ] ], tooltip=tooltip )
 	st.pydeck_chart( deck, use_container_width=True )
 
-	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab, history_tab = st.tabs(
+	entities_tab, aircraft_tab, military_tab, satellites_tab, vessels_tab, earthquakes_tab, fires_tab, infrastructure_tab, tracking_tab, measurements_tab, analysis_tab, geofence_tab, history_tab = st.tabs(
 		[ '🌐 Entities', '✈️ Aircraft', '🛩️ Military', '🛰️ Satellites', '🚢 Vessels',
-			'📈 Earthquakes', '🔥 Fires', '🎯 Tracking', '📏 Measurements', '🧭 Analysis',
-			'🛡️ Geofence', '🕓 Historical Replay' ] )
+			'📈 Earthquakes', '🔥 Fires', '📡 Infrastructure', '🎯 Tracking', '📏 Measurements',
+			'🧭 Analysis', '🛡️ Geofence', '🕓 Historical Replay' ] )
 
 	with entities_tab:
 		st.data_editor( make_live_world_display_frame( df_map ), key='live_world_entities_table',
@@ -2470,6 +2592,22 @@ def render_live_world_map( latitude: float, longitude: float ) -> None:
 			st.data_editor( make_live_world_display_frame( df_fire_records ),
 				key='live_world_fire_table', use_container_width=True,
 				disabled=True, hide_index=True )
+
+
+	with infrastructure_tab:
+		if df_infrastructure.empty:
+			st.info( 'No infrastructure features are loaded.' )
+		else:
+			categories = df_infrastructure[ 'Metadata' ].map(
+				lambda value: value.get( 'Category', '' ) if isinstance( value, dict ) else '' )
+			infra_c1, infra_c2 = st.columns( 2, border=True )
+			infra_c1.metric( 'Features', f'{len( df_infrastructure.index ):,}' )
+			infra_c2.metric( 'Categories', f'{categories.nunique( ):,}' )
+			df_display = df_infrastructure.copy( )
+			df_display[ 'Category' ] = categories
+			st.data_editor( df_display[ [ 'EntityId', 'Category', 'Name', 'Latitude', 'Longitude',
+				'Source', 'Metadata' ] ], key='live_world_infrastructure_table',
+				use_container_width=True, disabled=True, hide_index=True )
 
 	with tracking_tab:
 		if df_tracking.empty:
