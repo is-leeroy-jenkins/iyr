@@ -60,7 +60,7 @@ Live World Data extends Iyrin with a normalized operational geospatial layer bui
 | 📏 Measurements & Annotations | Great-circle distance, bearing, custom points, entity-to-entity measurements, and map annotations.                                      |
 
 
-## 🏛️ Data                                                                                                                                                                                | Records | Description                                                                                                                                 |
+## 🏛️ Data                                                                                                                                                                                
 
 | Dataset                                                                                                                                                                                 | Records | Description                                                                                                                                 |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------: | ------------------------------------------------------------------------------------------------------------------------------------------- |
