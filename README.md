@@ -27,13 +27,13 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 | 🌐 Live World Data     | Aircraft, military aircraft, satellites, vessels, fires, earthquakes, infrastructure, cameras, map layers, tracking, geofencing, replay, and cross-layer analysis. |
 
 
-## 🛸 UAP Data
+## Data
 
-[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-UAP%20Sightings-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-UAP%20Reports-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
 
 - 128,975 UAP sightings reported to the National UFO Reporting Center (NUFORC) from 1906 to 2021 by country, state, city and geograpic coordinates.
 
-[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-Superfund%20Sites-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
+[![Hugging Face Bucket](https://img.shields.io/badge/Hugging%20Face-EPA%20Sites-FFD21E?logo=huggingface&logoColor=000000)](https://huggingface.co/buckets/leeroy-jankins/UAP)
 
 - 4,478 Pollution sites with active EPA remediations or removals by country, state, city and geograpic coordinates.
 
@@ -45,7 +45,7 @@ Iyrin is a Streamlit-based geospatial, scientific-data, document-processing, and
 
 - 20,142 airports by country, state, city and geograpic coordinates.
 
-## 🌐 Live World Data
+## Live World Data
 
 Live World Data extends Iyrin with a normalized operational geospatial layer built around the `GeoEntity` contract. Heterogeneous providers are converted into a common schema containing entity identity, type, name, latitude, longitude, altitude, heading, speed, timestamp, source, and provider-specific metadata.
 
