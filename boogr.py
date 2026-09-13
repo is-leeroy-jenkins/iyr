@@ -1,7 +1,7 @@
 '''
   ******************************************************************************************
       Assembly:                Iyrin
-      Filename:                boogerappy.py
+      Filename:                booger.py
       Author:                  Terry D. Eppler
       Created:                 05-31-2022
 
@@ -39,7 +39,7 @@
     boogr.py
   </summary>
   ******************************************************************************************
-  '''
+'''
 from __future__ import annotations
 from pathlib import Path
 import traceback
